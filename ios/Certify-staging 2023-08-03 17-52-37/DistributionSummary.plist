@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Certify-staging.ipa</key>
+	<array>
+		<dict>
+			<key>architectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>buildNumber</key>
+			<string>44</string>
+			<key>certificate</key>
+			<dict>
+				<key>SHA1</key>
+				<string>78765FE50E877C0298ED63FD7FF900C2E3F9864E</string>
+				<key>dateExpires</key>
+				<string>7/9/24</string>
+				<key>type</key>
+				<string>iOS Distribution</string>
+			</dict>
+			<key>entitlements</key>
+			<dict>
+				<key>application-identifier</key>
+				<string>MPGT376V2K.com.certisgroup.cathy.staging</string>
+				<key>com.apple.developer.team-identifier</key>
+				<string>MPGT376V2K</string>
+				<key>get-task-allow</key>
+				<false/>
+			</dict>
+			<key>name</key>
+			<string>Certify-staging.app</string>
+			<key>profile</key>
+			<dict>
+				<key>UUID</key>
+				<string>21713ea0-02ac-4aae-8960-c36ede21e265</string>
+				<key>dateExpires</key>
+				<string>2/8/24</string>
+				<key>name</key>
+				<string>Certify 3.3.1 Staging</string>
+			</dict>
+			<key>team</key>
+			<dict>
+				<key>id</key>
+				<string>MPGT376V2K</string>
+				<key>name</key>
+				<string>Certis Cisco Security Pte Ltd (Enterprise)</string>
+			</dict>
+			<key>versionNumber</key>
+			<string>3.3.1</string>
+		</dict>
+	</array>
+</dict>
+</plist>

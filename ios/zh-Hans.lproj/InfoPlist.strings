@@ -1,0 +1,8 @@
+/*
+  InfoPlist.strings
+  Cathy
+
+  Created by Mason Chen on 29/6/21.
+  Copyright © 2021 Certis. All rights reserved.
+*/
+NSFaceIDUsageDescription = "使用面容ID代替密码来安全登录";

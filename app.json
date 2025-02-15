@@ -1,0 +1,13 @@
+{
+  "name": "Cathy",
+  "displayName": "Certify",
+  "expo": {
+    "name": "Cathy",
+    "slug": "expo-template-bare",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  }
+}

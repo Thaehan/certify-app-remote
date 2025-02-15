@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/roboto_regular"
+        tools:targetApi="28" />
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="700"
+        android:font="@font/roboto_bold"
+        tools:targetApi="28" />
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="500"
+        android:font="@font/roboto_medium"
+        tools:targetApi="28" />
+</font-family>
