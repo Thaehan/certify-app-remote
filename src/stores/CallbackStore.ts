@@ -8,18 +8,14 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import URI from 'urijs';
-import Base64 from 'base64-js';
-import {
-    Crypto,
-    RsaKey,
-    SigParams,
-} from '../nativeUtils/Crypto';
-import { HttpClient } from '../utils/HttpClient';
-import { I18n } from '../utils/I18n';
-import { Environment } from '../utils/Environment';
-import { RootStore } from './RootStore';
-import { MobileApp } from './AppListStore';
+import URI from "urijs";
+import Base64 from "base64-js";
+import { Crypto, RsaKey, SigParams } from "../nativeUtils/Crypto";
+import { HttpClient } from "../utils/HttpClient";
+import { toErrorMessage } from "../utils/I18n";
+import { Environment } from "../utils/Environment";
+import { RootStore } from "./RootStore";
+import { MobileApp } from "./AppListStore";
 
 // tslint:disable-next-line: interface-over-type-literal
 type Query = { [key: string]: string };
@@ -30,7 +26,6 @@ type Query = { [key: string]: string };
  * @author Lingqi
  */
 export class CallbackStore {
-
     private rootStore: RootStore;
 
     private readonly KEY_SIZE = 128;
@@ -48,41 +43,61 @@ export class CallbackStore {
     handleInboundLink(data: string, sign: string): Promise<Query> {
         return new Promise((resolve, reject) => {
             let inboundQuery: Query;
-            const secretKeyBytes = this.encode(sign.substring(0, this.KEY_SIZE / 8));
+            const secretKeyBytes = this.encode(
+                sign.substring(0, this.KEY_SIZE / 8)
+            );
             const ivBytes = new Uint8Array(16);
             const dataBytes = Base64.toByteArray(data);
-            Crypto.AES.decrypt('CBC', ivBytes, secretKeyBytes, dataBytes)
+            Crypto.AES.decrypt("CBC", ivBytes, secretKeyBytes, dataBytes)
                 .then((queryBytes) => {
-                    const query = URI.parseQuery('?' + this.decode(queryBytes)) as Query;
+                    const query = URI.parseQuery(
+                        "?" + this.decode(queryBytes)
+                    ) as Query;
                     inboundQuery = query;
-                    const queryString = Object.keys(query).sort().reduce((accumulator, queryKey) => {
-                        return accumulator + queryKey + query[queryKey];
-                    }, '');
+                    const queryString = Object.keys(query)
+                        .sort()
+                        .reduce((accumulator, queryKey) => {
+                            return accumulator + queryKey + query[queryKey];
+                        }, "");
                     const verifyBytes = this.encode(queryString);
                     const signature = Base64.toByteArray(sign);
                     const sigParams: SigParams = {
-                        scheme: 'PKCS1-v1_5',
-                        hash: 'SHA-256'
+                        scheme: "PKCS1-v1_5",
+                        hash: "SHA-256",
                     };
                     if (this.publicKey) {
-                        return Crypto.RSA.verify(sigParams, this.publicKey, verifyBytes, signature);
+                        return Crypto.RSA.verify(
+                            sigParams,
+                            this.publicKey,
+                            verifyBytes,
+                            signature
+                        );
                     } else {
-                        const keyBytes = this.pemToBinary(Environment.publicKey);
-                        return Crypto.RSA.importKey('spki', keyBytes).then((publicKey) => {
-                            this.publicKey = publicKey;
-                            return Crypto.RSA.verify(sigParams, this.publicKey, verifyBytes, signature);
-                        });
+                        const keyBytes = this.pemToBinary(
+                            Environment.publicKey
+                        );
+                        return Crypto.RSA.importKey("spki", keyBytes).then(
+                            (publicKey) => {
+                                this.publicKey = publicKey;
+                                return Crypto.RSA.verify(
+                                    sigParams,
+                                    this.publicKey,
+                                    verifyBytes,
+                                    signature
+                                );
+                            }
+                        );
                     }
                 })
                 .then((verified) => {
                     if (verified) {
-                        this.sessionId = inboundQuery['si'];
-                        this.appId = inboundQuery['ai'];
-                        this.appName = inboundQuery['app'];
+                        this.sessionId = inboundQuery["si"];
+                        this.appId = inboundQuery["ai"];
+                        this.appName = inboundQuery["app"];
                         resolve(inboundQuery);
                     } else {
-                        this.sessionId = 'fake';
-                        reject('not verified');
+                        this.sessionId = "fake";
+                        reject("not verified");
                     }
                 })
                 .catch((error: Error) => {
@@ -95,15 +110,18 @@ export class CallbackStore {
         return new Promise((resolve, reject) => {
             const sessionStore = this.rootStore.cognitoSessionStore;
             if (!this.sessionId || !sessionStore.currentSession) {
-                reject('There is no callback session');
+                reject("There is no callback session");
                 return;
             }
-            const url = Environment.endPoint + '/callback';
+            const url = Environment.endPoint + "/callback";
             const body = {
                 si: this.sessionId,
-                token: sessionStore.currentSession.getIdToken().getJwtToken()
+                token: sessionStore.currentSession.getIdToken().getJwtToken(),
             };
-            HttpClient.post<CallbackResponse>(url, { body, withCredentials: true })
+            HttpClient.post<CallbackResponse>(url, {
+                body,
+                withCredentials: true,
+            })
                 .then((response) => {
                     // const query = URI.buildQuery({
                     //     action: 'auth',
@@ -112,35 +130,35 @@ export class CallbackStore {
                     // });
                     // const redirectUrl = response.redirect_uri + '?' + query;
                     const redirectUrl = new URI(response.redirect_uri);
-                    redirectUrl.addSearch('action', 'auth');
-                    redirectUrl.addSearch('code', response.code);
-                    redirectUrl.addSearch('state', response.state);
+                    redirectUrl.addSearch("action", "auth");
+                    redirectUrl.addSearch("code", response.code);
+                    redirectUrl.addSearch("state", response.state);
                     resolve(redirectUrl.href());
                 })
                 .catch((reason) => {
-                    reject(I18n.toErrorMessage(reason));
+                    reject(toErrorMessage(reason));
                 });
         });
     }
 
     getAppStartLink(): string {
         if (!this.selectedApp) {
-            return '';
+            return "";
         }
         // const query = URI.buildQuery({
         //     action: 'start'
         // });
         // return this.selectedApp.redirectUri + '?' + query;
         const uri = new URI(this.selectedApp.redirectUri);
-        uri.addSearch('action', 'start');
+        uri.addSearch("action", "start");
         return uri.href();
     }
 
     clearCallback(): void {
         this.selectedApp = null!;
-        this.sessionId = '';
-        this.appName = '';
-        this.appId = '';
+        this.sessionId = "";
+        this.appName = "";
+        this.appId = "";
     }
 
     private encode(str: string): Uint8Array {
@@ -157,8 +175,8 @@ export class CallbackStore {
     }
 
     private pemToBinary(pem: string): Uint8Array {
-        const lines = pem.split('\n');
-        let pemContents = '';
+        const lines = pem.split("\n");
+        let pemContents = "";
         for (let i = 1; i < lines.length - 1; i++) {
             pemContents += lines[i].trim();
         }

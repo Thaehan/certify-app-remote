@@ -8,47 +8,32 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import {
-    NavigationActions,
-    NavigationContainerComponent,
-    NavigationParams,
-} from 'react-navigation';
+import { createNavigationContainerRef } from "@react-navigation/native";
+import { AppSwitchParamList } from "./AppSwitch";
 
-let navigator: NavigationContainerComponent;
+export const navigationRef = createNavigationContainerRef<AppSwitchParamList>();
 
-function setTopLevelNavigator(navigatorRef: NavigationContainerComponent): void {
-    navigator = navigatorRef;
+function navigate(name: keyof AppSwitchParamList, params?: any) {
+    if (navigationRef.isReady()) {
+        navigationRef.navigate(name, params);
+    }
 }
 
-function navigate(routeName: string, params?: NavigationParams): void {
-    navigator.dispatch(
-        NavigationActions.navigate({
-            routeName,
-            params,
-        }),
-    );
+function back(): void {
+    if (navigationRef.isReady()) {
+        navigationRef.goBack();
+    }
 }
 
-function back(key?: string): void {
-    navigator.dispatch(
-        NavigationActions.back({
-            key,
-        }),
-    );
-}
-
-function setParams(key: string, params: NavigationParams): void {
-    navigator.dispatch(
-        NavigationActions.setParams({
-            key,
-            params
-        })
-    );
+function setParams(params: any): void {
+    if (navigationRef.isReady()) {
+        navigationRef.setParams(params);
+    }
 }
 
 export const NavigationService = {
-    setTopLevelNavigator,
+    navigationRef,
     navigate,
     back,
-    setParams
+    setParams,
 };

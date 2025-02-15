@@ -8,27 +8,22 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, { PureComponent, Fragment } from "react";
-import { View, Image, Alert, Dimensions, StyleSheet } from "react-native";
-import { inject } from "mobx-react";
-import { I18n } from "../../../utils/I18n";
-import { AllStores } from "../../../stores/RootStore";
-import { AuthenticateStore } from "../../../stores/AuthenticateStore";
-import { MfaInputView } from "../../../shared-components/mfa-input/MfaInputView";
-import { TextFix } from "../../../shared-components/cathy/IOSFix";
-
-import { cathyViews } from "../../../shared-components/cathy/CommonViews";
-import { Colors } from "../../../utils/Colors";
+import { inject, observer } from "mobx-react";
+import React, { FC, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, Dimensions, StyleSheet, View } from "react-native";
 import {
     CathyRaisedButton,
     CathyTextButton,
 } from "../../../shared-components/cathy/CathyButton";
+import { TextFix } from "../../../shared-components/cathy/IOSFix";
+import { MfaInputView } from "../../../shared-components/mfa-input/MfaInputView";
+import { AuthenticateStore } from "../../../stores/AuthenticateStore";
+import { AllStores } from "../../../stores/RootStore";
+import { Colors } from "../../../utils/Colors";
 
 interface Props {
     authenticateStore: AuthenticateStore;
-}
-interface State {
-    mfaCode: string;
 }
 
 /**
@@ -36,129 +31,84 @@ interface State {
  *
  * @author Lingqi
  */
-@inject(({ rootStore }: AllStores) => ({
+const LoginTOTPScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
     authenticateStore: rootStore.authenticateStore,
-}))
-export class LoginTOTPScreen extends PureComponent<Props, State> {
-    static defaultProps = {
-        authenticateStore: undefined,
-    };
+}))(
+    observer(({ authenticateStore }) => {
+        const [mfaCode, setMfaCode] = useState("");
+        const mfaInputViewRef = useRef<MfaInputView>(null);
+        const { t } = useTranslation();
 
-    private mfaInputView!: MfaInputView;
-
-    private timerId!: ReturnType<typeof setInterval>;
-
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            mfaCode: "",
+        const showAlert = (title: string, message: string): void => {
+            setTimeout(() => {
+                Alert.alert(
+                    title,
+                    message,
+                    [{ text: t("alert.button.ok"), style: "cancel" }],
+                    { cancelable: false }
+                );
+            }, 100);
         };
-        // this.onPressResend = this.onPressResend.bind(this);
-        this.onChangeCode = this.onChangeCode.bind(this);
-        this.onPressProceed = this.onPressProceed.bind(this);
-        this.handleBack = this.handleBack.bind(this);
-    }
 
-    //**************************************************************
-    // Component Lifecycle
-    //****************************************************************
-
-    componentWillUnmount() {
-        clearInterval(this.timerId);
-    }
-    //**************************************************************
-    // MFA Callbacks
-    //****************************************************************
-
-    private onChangeCode(code: string): void {
-        this.setState({
-            mfaCode: code,
-        },()=>{
-            if(this.state.mfaCode.length == 6){
-                this.onPressProceed()
+        const onChangeCode = (code: string): void => {
+            setMfaCode(code);
+            if (code.length === 6) {
+                onPressProceed();
             }
-        });
-    }
+        };
 
-    //**************************************************************
-    // Button Callbacks
-    //****************************************************************
+        const onPressProceed = async (): Promise<void> => {
+            try {
+                await authenticateStore.sendMFACode(
+                    mfaCode,
+                    "SOFTWARE_TOKEN_MFA"
+                );
+            } catch (err) {
+                showAlert(t("alert.title.error"), err as string);
+                mfaInputViewRef.current?.clear();
+                setMfaCode("");
+            }
+        };
 
-    private async onPressProceed(): Promise<void> {
-        await this.props.authenticateStore
-            .sendMFACode(this.state.mfaCode, "SOFTWARE_TOKEN_MFA")
-            .catch((err: string) => {
-                this.showAlert(I18n.t("alert.title.error"), err);
-                this.mfaInputView.clear();
+        const handleBack = (): void => {
+            authenticateStore.clearStates();
+        };
 
-                this.setState({
-                    mfaCode: "",
-                });
-            });
-    }
-    //**************************************************************
-    // Other Methods
-    //****************************************************************
-
-    private showAlert(title: string, message: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                title,
-                message,
-                [{ text: I18n.t("alert.button.ok"), style: "cancel" }],
-                { cancelable: false }
-            );
-        }, 100);
-    }
-
-    handleBack = () => {
-        this.props.authenticateStore.clearStates();
-    };
-    //**************************************************************
-    // Render
-    //****************************************************************
-
-    render() {
         return (
             <View style={styles.container}>
                 <View style={styles.innerContainer}>
                     <TextFix style={styles.title}>
-                        {I18n.t("auth.login.mfa_title")}
+                        {t("auth.login.mfa_title")}
                     </TextFix>
                     <TextFix style={styles.subtitle}>
-                        {I18n.t("auth.login.mfa_subtitle")}
+                        {t("auth.login.mfa_subtitle")}
                     </TextFix>
                     <View style={styles.middleSpace2} />
                     <MfaInputView
-                        ref={(mfaInputView) =>
-                            (this.mfaInputView = mfaInputView!)
-                        }
-                        onChangeCode={(code) => {
-                            this.onChangeCode(code);
-                        }}
+                        ref={mfaInputViewRef}
+                        onChangeCode={onChangeCode}
                     />
                     <View style={styles.middleSpace3} />
                     <TextFix style={styles.subtitle}>
-                        {I18n.t("auth.login.lost_totp_access")}
+                        {t("auth.login.lost_totp_access")}
                     </TextFix>
                     <View style={styles.middleSpace3} />
                     <CathyRaisedButton
-                        disabled={this.state.mfaCode.length < 6}
+                        disabled={mfaCode.length < 6}
                         style={styles.loginButton}
-                        text={I18n.t("auth.submit")}
-                        onPress={this.onPressProceed}
+                        text={t("auth.submit")}
+                        onPress={onPressProceed}
                     />
                     <View style={styles.middleSpace1} />
                     <CathyTextButton
-                        text={I18n.t("auth.back")}
-                        onPress={this.handleBack}
+                        text={t("auth.back")}
+                        onPress={handleBack}
                     />
                 </View>
-                {/* <View style={styles.bottomSpace} /> */}
             </View>
         );
-    }
-}
+    })
+);
 
 const screenHeight = Dimensions.get("screen").height;
 const styles = StyleSheet.create({
@@ -212,3 +162,5 @@ const styles = StyleSheet.create({
         marginHorizontal: 0,
     },
 });
+
+export { LoginTOTPScreen };

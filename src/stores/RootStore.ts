@@ -8,22 +8,18 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import {
-    configure,
-    observable,
-    action,
-} from 'mobx';
-import { I18n } from '../utils/I18n';
-import { CallbackStore } from './CallbackStore';
-import { UserPoolStore } from './UserPoolStore';
-import { AuthenticateStore } from './AuthenticateStore';
-import { ForgotPasswordStore } from './ForgotPasswordStore';
-import { CognitoSessionStore } from './CognitoSessionStore';
+import { configure, observable, action } from "mobx";
+import { changeLanguage, getStoredLanguage } from "../utils/I18n";
+import { CallbackStore } from "./CallbackStore";
+import { UserPoolStore } from "./UserPoolStore";
+import { AuthenticateStore } from "./AuthenticateStore";
+import { ForgotPasswordStore } from "./ForgotPasswordStore";
+import { CognitoSessionStore } from "./CognitoSessionStore";
 import { BiometricStore } from "./BiometricStore";
-import { AppListStore } from './AppListStore';
+import { AppListStore } from "./AppListStore";
 
 configure({
-    enforceActions: 'observed',
+    enforceActions: "observed",
 });
 
 export interface AllStores {
@@ -36,7 +32,6 @@ export interface AllStores {
  * @author Lingqi
  */
 export class RootStore {
-
     private _userPoolStore: UserPoolStore;
     private _authenticateStore: AuthenticateStore;
     private _forgotPasswordStore: ForgotPasswordStore;
@@ -56,7 +51,7 @@ export class RootStore {
         this._appListStore = new AppListStore(this);
         this._biometricStore = new BiometricStore(this);
 
-        this.currentLang = I18n.currentLocale();
+        this.currentLang = getStoredLanguage() ?? "en";
     }
 
     get userPoolStore(): UserPoolStore {
@@ -83,7 +78,7 @@ export class RootStore {
 
     @action
     useLang(lang: string) {
-        I18n.locale = lang;
+        changeLanguage(lang);
         this.currentLang = lang;
     }
 }

@@ -8,24 +8,20 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React from 'react';
+import React from "react";
+import { AppRegistry, LogBox, Text, TextInput } from "react-native";
+import { Provider as MobxProvider } from "mobx-react";
 import {
-    AppRegistry,
-    YellowBox,
-    Text,
-    TextInput,
-} from 'react-native';
-import { Provider as MobxProvider } from 'mobx-react';
-import { Provider as PaperProvider, DefaultTheme, configureFonts } from 'react-native-paper';
-import { App } from './src/App';
+    Provider as PaperProvider,
+    DefaultTheme,
+    configureFonts,
+} from "react-native-paper";
+import { App } from "./src/App";
 // import { App } from './example/App';
-import { name as appName } from './app.json';
-import { RootStore } from './src/stores/RootStore';
+import { name as appName } from "./app.json";
+import { RootStore } from "./src/stores/RootStore";
 
-YellowBox.ignoreWarnings([
-    'Warning: AsyncStorage has been extracted from react-native core',
-    'Setting a timer'
-]);
+LogBox.ignoreLogs([]);
 
 /**
  * Context initialization
@@ -37,63 +33,62 @@ const Root = () => {
     TextInput.defaultProps = { allowFontScaling: false };
     const fontConfig = {
         ios: {
-          regular: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          },
-          medium: {
-            fontFamily: 'Roboto-Medium',
-            fontWeight: 'normal',
-          },
-          light: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          },
-          thin: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          },
-          "labelMedium": {
-       
-          },
-          "bodyLarge": {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          }
+            regular: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
+            medium: {
+                fontFamily: "Roboto-Medium",
+                fontWeight: "normal",
+            },
+            light: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
+            thin: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
+            labelMedium: {},
+            bodyLarge: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
         },
-        
+
         android: {
-          regular: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          },
-          medium: {
-            fontFamily: 'Roboto-Medium',
-            fontWeight: 'normal',
-          },
-          light: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          },
-          thin: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          },
-          labelMedium: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          },
-          bodyLarge: {
-            fontFamily: 'Roboto-Regular',
-            fontWeight: 'normal',
-          }
+            regular: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
+            medium: {
+                fontFamily: "Roboto-Medium",
+                fontWeight: "normal",
+            },
+            light: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
+            thin: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
+            labelMedium: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
+            bodyLarge: {
+                fontFamily: "Roboto-Regular",
+                fontWeight: "normal",
+            },
         },
-      };
-      
-      const theme = {
+    };
+
+    const theme = {
         ...DefaultTheme,
-        fonts: configureFonts({config: fontConfig, isV3: false}),
-      };
+        fonts: configureFonts({ config: fontConfig, isV3: false }),
+    };
+
     return (
         <MobxProvider rootStore={new RootStore()}>
             <PaperProvider theme={theme}>

@@ -19,11 +19,11 @@
         },
         "login": {
             "initial_title": "你好!",
-            "initial_subtitle": "登录到 %{appName}",
+            "initial_subtitle": "登录到 {{appName}}",
             "mfa_title": "安全验证",
             "success_title": "您已登录!",
-            "success_subtitle": "嗨 %{name}",
-            "success_info": "请稍后，正在返回 %{appName}",
+            "success_subtitle": "嗨 {{name}}",
+            "success_info": "请稍后，正在返回 {{appName}}",
             "login_button": "登录",
             "forgot_button": "忘记密码?",
             "update_button": "更改",
@@ -34,14 +34,14 @@
             "initial_title": "重置密码",
             "initial_subtitle": "输入您的员工编号",
             "success_title": "重置密码成功!",
-            "success_info": "正在返回登录页面 %{count}",
+            "success_info": "正在返回登录页面 {{count}}",
             "next_button": "下一步",
             "proceed_button": "继续"
         },
         "sso": {
             "title": "欢迎回来",
-            "subtitle": "已经以 %{name} 的身份登录",
-            "continue_button": "返回到 %{appName}",
+            "subtitle": "已经以 {{name}} 的身份登录",
+            "continue_button": "返回到 {{appName}}",
             "another_button": "使用其它账号登录"
         },
         "biometrics": {
@@ -57,9 +57,9 @@
         "activate": {
             "activate_button": "激活"
         },
-        "otp_phone": "动态密码已发送到您的手机 %{value}",
-        "otp_email": "动态密码已发送至您的邮箱 %{value}",
-        "otp_count": "重新发送 %{count}",
+        "otp_phone": "动态密码已发送到您的手机 {{value}}",
+        "otp_email": "动态密码已发送至您的邮箱 {{value}}",
+        "otp_count": "重新发送 {{count}}",
         "otp_button": "重新发送",
         "eight_characters_long": "至少八个字符\n",
         "upper_case": "至少一个大写字符\n",
@@ -80,7 +80,7 @@
         "sms_setup": {
             "title": "Set up SMS",
             "mfa": "MFA",
-            "otp_phone": "we have delivered the authentication code by SMS to %{value}. Please enter the code to complete authentication",
+            "otp_phone": "we have delivered the authentication code by SMS to {{value}}. Please enter the code to complete authentication",
             "verification_failed": "TOTP verification failed",
             "verification_failed_title": "error!"
         },
@@ -165,8 +165,8 @@
         "exit_temp_password": "你想回去登錄啊?",
         "exit_reset": "你想回去登錄啊?",
         "password_success": "密码修改成功!",
-        "activate_success": "一封邮件已发送至 %{email}",
-        "not_installed": "%{appName} 未安装，点击“确定”前往下载"
+        "activate_success": "一封邮件已发送至 {{email}}",
+        "not_installed": "{{appName}} 未安装，点击“确定”前往下载"
     },
 
     "locale": {
@@ -183,7 +183,7 @@
     },
 
     "error": {
-        "not_installed": "%{appName} 未安装。",
+        "not_installed": "{{appName}} 未安装。",
         "no_valid_email": "您没有电子邮箱。",
         "no_verified_email": "请完成您的登录尝试。",
         "Default": "出现问题，请联系 IS 服务台。",

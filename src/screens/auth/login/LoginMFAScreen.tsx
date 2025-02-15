@@ -8,34 +8,23 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, {
-    PureComponent,
-    Fragment
-} from 'react';
+import { inject, observer } from "mobx-react";
+import React, { FC, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, Dimensions, Keyboard, StyleSheet, View } from "react-native";
 import {
-    View,
-    Image,
-    Alert,
-    Keyboard,
-    Dimensions,
-    StyleSheet,
-} from 'react-native';
-import { inject } from 'mobx-react';
-import { I18n } from '../../../utils/I18n';
-import { AllStores } from '../../../stores/RootStore';
-import { AuthenticateStore } from '../../../stores/AuthenticateStore';
-import { MfaInputView } from '../../../shared-components/mfa-input/MfaInputView';
-import { TextFix } from '../../../shared-components/cathy/IOSFix';
-import { CathyRaisedButton, CathyTextButton } from '../../../shared-components/cathy/CathyButton';
-import { cathyViews } from '../../../shared-components/cathy/CommonViews';
-import { Colors } from '../../../utils/Colors';
+    CathyRaisedButton,
+    CathyTextButton,
+} from "../../../shared-components/cathy/CathyButton";
+import { cathyViews } from "../../../shared-components/cathy/CommonViews";
+import { TextFix } from "../../../shared-components/cathy/IOSFix";
+import { MfaInputView } from "../../../shared-components/mfa-input/MfaInputView";
+import { AuthenticateStore } from "../../../stores/AuthenticateStore";
+import { AllStores } from "../../../stores/RootStore";
+import { Colors } from "../../../utils/Colors";
 
 interface Props {
     authenticateStore: AuthenticateStore;
-}
-interface State {
-    mfaSent: boolean;
-    countDown: number;
 }
 
 /**
@@ -43,185 +32,142 @@ interface State {
  *
  * @author Lingqi
  */
-@inject(({ rootStore }: AllStores) => ({
+const LoginMFAScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
     authenticateStore: rootStore.authenticateStore,
-}))
-export class LoginMFAScreen extends PureComponent<Props, State> {
+}))(
+    observer(({ authenticateStore }) => {
+        const OTP_MAX = 40;
+        const [mfaSent, setMfaSent] = useState(true);
+        const [countDown, setCountDown] = useState(OTP_MAX);
+        const [mfaCode, setMfaCode] = useState("");
 
-    static defaultProps = {
-        authenticateStore: undefined
-    };
+        const mfaInputViewRef = useRef<MfaInputView>(null);
 
-    private mfaInputView!: MfaInputView;
+        const { t } = useTranslation();
 
-    private readonly OTP_MAX = 40;
-    private mfaCode: string;
-    private timerId!: ReturnType<typeof setInterval>;
+        useEffect(() => {
+            const timerId = setInterval(() => {
+                if (mfaSent) {
+                    setCountDown((prevCount) => {
+                        const newCount = prevCount - 1;
+                        if (newCount === 0) {
+                            setMfaSent(false);
+                            return OTP_MAX;
+                        }
+                        return newCount;
+                    });
+                }
+            }, 1000);
 
-    constructor(props: Props) {
-        super(props);
-        this.mfaCode = '';
-        this.state = {
-            mfaSent: true,
-            countDown: this.OTP_MAX,
+            return () => clearInterval(timerId);
+        }, [mfaSent]);
+
+        const showAlert = (title: string, message: string): void => {
+            setTimeout(() => {
+                Alert.alert(
+                    title,
+                    message,
+                    [{ text: t("alert.button.ok"), style: "cancel" }],
+                    { cancelable: false }
+                );
+            }, 100);
         };
-        this.onPressResend = this.onPressResend.bind(this);
-        this.onChangeCode = this.onChangeCode.bind(this);
-        this.handleBack = this.handleBack.bind(this);
-        this.onPressProceed = this.onPressProceed.bind(this);
 
-    }
+        const onChangeCode = (code: string): void => {
+            setMfaCode(code);
+        };
 
-    //**************************************************************
-    // Component Lifecycle
-    //****************************************************************
+        const onPressResend = (): void => {
+            Keyboard.dismiss();
+            setMfaSent(true);
+            setCountDown(OTP_MAX);
+            authenticateStore.resendOTP().catch((err: string) => {
+                showAlert(t("alert.title.error"), err);
+                setMfaSent(false);
+            });
+        };
 
-    componentDidMount() {
-        this.timerId = setInterval(this.updateCountdown, 1000);
-    }
-    
-    componentWillUnmount() {
-        clearInterval(this.timerId);
-    }
-
-    //**************************************************************
-    // MFA Callbacks
-    //****************************************************************
-
-    private onChangeCode = (code: string): void => {
-        this.mfaCode = code;
-    }
-
-    //**************************************************************
-    // Helper Functions
-    //****************************************************************
-
-    private updateCountdown = (): void => {
-        if (this.state.mfaSent) {
-            this.setState(prevState => ({
-                mfaSent: prevState.countDown > 1,
-                countDown: prevState.countDown - 1,
-                }));
+        const onPressProceed = (): void => {
+            if (authenticateStore.otpMode === "SetupSmsMfa") {
+                authenticateStore.sendCodeSmsMFA(mfaCode);
+            } else {
+                authenticateStore.sendMFACode(mfaCode).catch((err: string) => {
+                    showAlert(t("alert.title.error"), err);
+                    mfaInputViewRef.current?.clear();
+                    setMfaCode("");
+                });
             }
-        }
+        };
 
-    //**************************************************************
-    // Button Callbacks
-    //****************************************************************
+        const handleBack = (): void => {
+            authenticateStore.clearStates();
+        };
 
-    private onPressResend(): void {
-        Keyboard.dismiss();
-        this.setState({
-            mfaSent: true,
-            countDown: this.OTP_MAX,
-        });
-        this.props.authenticateStore.resendOTP()
-            .then()
-            .catch((err: string) => {
-                this.showAlert(I18n.t('alert.title.error'), err);
-                this.setState({ mfaSent: false });
-            });
-    }
-
-    private onPressProceed(): void {
-        if(this.props.authenticateStore.otpMode == 'SetupSmsMfa'){
-            this.props.authenticateStore.sendCodeSmsMFA(this.mfaCode)
-        }else{
-            this.props.authenticateStore.sendMFACode(this.mfaCode)
-            .then()
-            .catch((err: string) => {
-                this.showAlert(I18n.t('alert.title.error'), err);
-                this.mfaInputView.clear();
-                this.mfaCode = '';
-            });
-        }
-      
-    }
-
-    //**************************************************************
-    // Other Methods
-    //****************************************************************
-
-    private showAlert(title: string, message: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                title,
-                message,
-                [{ text: I18n.t('alert.button.ok'), style: 'cancel' }],
-                { cancelable: false },
-            );
-        }, 100);
-    }
-    handleBack = () => {
-        this.props.authenticateStore.clearStates();
-    };
-    //**************************************************************
-    // Render
-    //****************************************************************
-
-    render() {
-        const { authenticateStore } = this.props;
         return (
             <View style={styles.container}>
                 <View style={styles.content}>
                     <TextFix style={styles.title}>
-                        {I18n.t('auth.login.mfa_title')}
+                        {t("auth.login.mfa_title")}
                     </TextFix>
                     <TextFix style={styles.subtitle}>
-                        {authenticateStore.verifyDetail.type === 'email' ?
-                            I18n.t('auth.otp_email', { value: authenticateStore.verifyDetail.value }) :
-                            I18n.t('auth.otp_phone', { value: authenticateStore.verifyDetail.value })}
+                        {authenticateStore.verifyDetail.type === "email"
+                            ? t("auth.otp_email", {
+                                  value: authenticateStore.verifyDetail.value,
+                              })
+                            : t("auth.otp_phone", {
+                                  value: authenticateStore.verifyDetail.value,
+                              })}
                     </TextFix>
                     <View style={styles.middleSpace2} />
-                    {this.state.mfaSent ? (
+                    {mfaSent ? (
                         <TextFix style={cathyViews.countDown}>
-                            {I18n.t('auth.otp_count', { count: this.state.countDown })}
+                            {t("auth.otp_count", { count: countDown })}
                         </TextFix>
                     ) : (
                         <CathyTextButton
-                            text={I18n.t('auth.otp_button')}
-                            onPress={this.onPressResend} />
+                            text={t("auth.otp_button")}
+                            onPress={onPressResend}
+                        />
                     )}
                     <View style={styles.middleSpace2} />
                     <MfaInputView
-                        ref={(mfaInputView) => this.mfaInputView = mfaInputView!}
-                        onChangeCode={this.onChangeCode} />
+                        ref={mfaInputViewRef}
+                        onChangeCode={onChangeCode}
+                    />
                     <View style={styles.middleSpace3} />
-
                     <CathyRaisedButton
-                        disabled={this.mfaCode.length < 6}
+                        disabled={mfaCode.length < 6}
                         style={styles.loginButton}
-                        text={I18n.t("auth.submit")}
-                        onPress={this.onPressProceed}
+                        text={t("auth.submit")}
+                        onPress={onPressProceed}
                     />
                     <View style={styles.middleSpace1} />
-
                     <CathyTextButton
-                        text={I18n.t("auth.back")}
-                        onPress={this.handleBack}
+                        text={t("auth.back")}
+                        onPress={handleBack}
                     />
                 </View>
             </View>
         );
-    }
-}
+    })
+);
 
-const screenHeight = Dimensions.get('screen').height;
-const styles = StyleSheet.create({ 
+const screenHeight = Dimensions.get("screen").height;
+const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
+        justifyContent: "center",
     },
     content: {
-        backgroundColor: 'white',
+        backgroundColor: "white",
         margin: 20,
         padding: 20,
     },
     topSpace: {
-        height: (screenHeight > 660 ? 96 : 80) * (screenHeight - 272) / 459,
+        height: ((screenHeight > 660 ? 96 : 80) * (screenHeight - 272)) / 459,
     },
     otpImage: {
-        alignSelf: 'center',
+        alignSelf: "center",
         width: 100,
         height: 96,
     },
@@ -231,10 +177,10 @@ const styles = StyleSheet.create({
         maxHeight: 32,
     },
     middleSpace2: {
-        height: (screenHeight > 660 ? 26 : 14) * (screenHeight - 272) / 459,
+        height: ((screenHeight > 660 ? 26 : 14) * (screenHeight - 272)) / 459,
     },
     middleSpace3: {
-        height: 20 * (screenHeight - 272) / 459,
+        height: (20 * (screenHeight - 272)) / 459,
     },
     bottomSpace: {
         flex: 1, // 223
@@ -248,9 +194,9 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         marginTop: 8,
-        fontFamily: 'Roboto-Regular',
+        fontFamily: "Roboto-Regular",
         fontSize: 14,
-        textAlign: 'center',
+        textAlign: "center",
         color: Colors.helperText,
     },
     loginButton: {
@@ -258,3 +204,5 @@ const styles = StyleSheet.create({
         marginHorizontal: 0,
     },
 });
+
+export { LoginMFAScreen };

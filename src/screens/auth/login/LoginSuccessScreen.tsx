@@ -8,32 +8,28 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, {
-    PureComponent,
-    Fragment
-} from 'react';
+import { inject, observer } from "mobx-react";
+import React, { FC, Fragment, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
-    Image,
-    View,
     Alert,
-    Linking,
     Dimensions,
+    Image,
+    Linking,
     StyleSheet,
-} from 'react-native';
-import { inject } from 'mobx-react';
-import { NavigationScreenProp, NavigationRoute } from 'react-navigation';
-import { I18n } from '../../../utils/I18n';
-import { AllStores } from '../../../stores/RootStore';
-import { CognitoSessionStore } from '../../../stores/CognitoSessionStore';
-import { CallbackStore } from '../../../stores/CallbackStore';
-import { AppListStore } from '../../../stores/AppListStore';
-import { TextFix } from '../../../shared-components/cathy/IOSFix';
-import { cathyViews } from '../../../shared-components/cathy/CommonViews';
+    View,
+} from "react-native";
+import { cathyViews } from "../../../shared-components/cathy/CommonViews";
+import { TextFix } from "../../../shared-components/cathy/IOSFix";
+import { AppListStore } from "../../../stores/AppListStore";
 import { AuthenticateStore } from "../../../stores/AuthenticateStore";
 import { BiometricStore } from "../../../stores/BiometricStore";
+import { CallbackStore } from "../../../stores/CallbackStore";
+import { CognitoSessionStore } from "../../../stores/CognitoSessionStore";
+import { AllStores } from "../../../stores/RootStore";
 
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     sessionStore: CognitoSessionStore;
     callbackStore: CallbackStore;
     appListStore: AppListStore;
@@ -46,135 +42,138 @@ interface Props {
  *
  * @author Lingqi
  */
-@inject(({ rootStore }: AllStores) => ({
+const LoginSuccessScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
     sessionStore: rootStore.cognitoSessionStore,
     callbackStore: rootStore.callbackStore,
     appListStore: rootStore.appListStore,
     authenticateStore: rootStore.authenticateStore,
-    biometricStore: rootStore.biometricStore
-}))
-export class LoginSuccessScreen extends PureComponent<Props> {
+    biometricStore: rootStore.biometricStore,
+}))(
+    observer(
+        ({
+            navigation,
+            sessionStore,
+            callbackStore,
+            appListStore,
+            authenticateStore,
+            biometricStore,
+        }) => {
+            const { t } = useTranslation();
 
-    static defaultProps = {
-        authenticateStore: undefined,
-        sessionStore: undefined,
-        callbackStore: undefined,
-        appListStore: undefined,
-        biometricStore: undefined,
-    };
+            const showAlert = (title: string, message: string): void => {
+                setTimeout(() => {
+                    Alert.alert(
+                        title,
+                        message,
+                        [{ text: t("alert.button.ok"), style: "cancel" }],
+                        { cancelable: false }
+                    );
+                }, 100);
+            };
 
-    constructor(props: Props) {
-        super(props);
-    }
+            const openUrl = (url: string): void => {
+                setTimeout(() => {
+                    Linking.openURL(url)
+                        .then(() => {
+                            callbackStore.clearCallback();
+                            navigation.navigate("Splash");
+                        })
+                        .catch(() => {
+                            showAlert(
+                                t("alert.title.error"),
+                                t("error.not_installed", {
+                                    appName: callbackStore.appName,
+                                })
+                            );
+                        });
+                }, 1000);
+            };
 
-    //**************************************************************
-    // Component Lifecycle
-    //****************************************************************
+            useEffect(() => {
+                const handleBiometricsAndNavigation = async () => {
+                    const isAdded =
+                        await authenticateStore.addBiometricFunctionality();
 
-    componentDidMount() {
-        const { navigation, callbackStore, appListStore, authenticateStore, biometricStore } = this.props;
+                    if (biometricStore.isFirstBioSetup) {
+                        const bioType = t(
+                            `auth.biometrics.${biometricStore.bioLocalisationKey}`
+                        );
+                        showAlert(
+                            t("auth.biometrics.setup_successful_title", {
+                                bioType,
+                            }),
+                            t("auth.biometrics.setup_successful_subtitle", {
+                                bioType,
+                            })
+                        );
+                    }
 
-        authenticateStore.addBiometricFunctionality().then(isAdded => {
-            if (biometricStore.isFirstBioSetup) {
-                const bioType = I18n.t(`auth.biometrics.${biometricStore.bioLocalisationKey}`);
-                this.showAlert(
-                    I18n.t("auth.biometrics.setup_successful_title", { bioType: bioType }),
-                    I18n.t("auth.biometrics.setup_successful_subtitle", { bioType: bioType }),
-                );
-            }
-            if (callbackStore.sessionId) {
-                callbackStore.getOutboundLink()
-                    .then((redirectUrl) => {
-                        this.openUrl(redirectUrl);
-                    })
-                    .catch((reason: string) => {
-                        this.showAlert(I18n.t('alert.title.error'), reason);
-                    });
-            } else {
-                appListStore.fetchAppList()
-                    .then()
-                    .catch((reason) => {
-                        console.log(reason);
-                    });
-                navigation.navigate('Main/Home');
-            }
-        });
-    }
+                    if (callbackStore.sessionId) {
+                        try {
+                            const redirectUrl =
+                                await callbackStore.getOutboundLink();
+                            openUrl(redirectUrl);
+                        } catch (reason) {
+                            showAlert(t("alert.title.error"), reason as string);
+                        }
+                    } else {
+                        try {
+                            await appListStore.fetchAppList();
+                        } catch (reason) {
+                            console.log(reason);
+                        }
+                        navigation.navigate("Main/Home");
+                    }
+                };
 
-    //**************************************************************
-    // Other Methods
-    //****************************************************************
+                handleBiometricsAndNavigation();
+            }, []);
 
-    private openUrl(url: string): void {
-        const { navigation, callbackStore } = this.props;
-        setTimeout(() => {
-            Linking.openURL(url).then(() => {
-                callbackStore.clearCallback();
-                navigation.navigate('Splash');
-            }).catch(() => {
-                this.showAlert(
-                    I18n.t('alert.title.error'),
-                    I18n.t('error.not_installed', { appName: callbackStore.appName })
-                );
-            });
-        }, 1000);
-    }
-
-    private showAlert(title: string, message: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                title,
-                message,
-                [{ text: I18n.t('alert.button.ok'), style: 'cancel' }],
-                { cancelable: false },
-            );
-        }, 100);
-    }
-
-    //**************************************************************
-    // Render
-    //****************************************************************
-
-    render() {
-        const { sessionStore, callbackStore } = this.props;
-        return (
-            <Fragment>
-                <View style={styles.topSpace} />
-                <Image
-                    style={styles.successImage}
-                    source={require('../../../assets/image/auth/success.png')}
-                    resizeMode={'contain'} />
-                <View style={styles.middleSpace1} />
-                <TextFix style={cathyViews.title}>
-                    {I18n.t('auth.login.success_title')}
-                </TextFix>
-                <TextFix style={[cathyViews.title, styles.subtitle]}>
-                    {I18n.t('auth.login.success_subtitle', { name: sessionStore.displayName() })}
-                </TextFix>
-                {
-                    callbackStore.sessionId &&
-                    <TextFix style={[cathyViews.subtitle, styles.successInfo]}>
-                        {I18n.t('auth.login.success_info', { appName: callbackStore.appName })}
+            return (
+                <Fragment>
+                    <View style={styles.topSpace} />
+                    <Image
+                        style={styles.successImage}
+                        source={require("../../../assets/image/auth/success.png")}
+                        resizeMode={"contain"}
+                    />
+                    <View style={styles.middleSpace1} />
+                    <TextFix style={cathyViews.title}>
+                        {t("auth.login.success_title")}
                     </TextFix>
-                }
-                <View style={styles.bottomSpace} />
-            </Fragment>
-        );
-    }
-}
+                    <TextFix style={[cathyViews.title, styles.subtitle]}>
+                        {t("auth.login.success_subtitle", {
+                            name: sessionStore.displayName(),
+                        })}
+                    </TextFix>
+                    {callbackStore.sessionId && (
+                        <TextFix
+                            style={[cathyViews.subtitle, styles.successInfo]}
+                        >
+                            {t("auth.login.success_info", {
+                                appName: callbackStore.appName,
+                            })}
+                        </TextFix>
+                    )}
+                    <View style={styles.bottomSpace} />
+                </Fragment>
+            );
+        }
+    )
+);
 
-const screenHeight = Dimensions.get('screen').height;
+const screenHeight = Dimensions.get("screen").height;
 const styles = StyleSheet.create({
     topSpace: {
-        height: 100 * (screenHeight - 222) / 509,
+        height: (100 * (screenHeight - 222)) / 509,
     },
     successImage: {
-        alignSelf: 'center',
+        alignSelf: "center",
         width: 83,
         height: 102,
     },
     middleSpace1: {
-        height: 28 * (screenHeight - 222) / 509,
+        height: (28 * (screenHeight - 222)) / 509,
         minHeight: 16,
     },
     subtitle: {
@@ -187,3 +186,5 @@ const styles = StyleSheet.create({
         flex: 1, // 381
     },
 });
+
+export { LoginSuccessScreen };

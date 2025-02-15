@@ -8,30 +8,29 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, { PureComponent } from "react";
+import { inject, observer } from "mobx-react";
+import React, { FC } from "react";
+import { useTranslation } from "react-i18next";
 import {
-    Image,
-    View,
     Alert,
-    Linking,
     Dimensions,
+    Image,
+    Linking,
     StyleSheet,
     Text,
+    View,
 } from "react-native";
-import { inject } from "mobx-react";
-import { NavigationScreenProp, NavigationRoute } from "react-navigation";
-import { I18n } from "../../../utils/I18n";
-import { AllStores } from "../../../stores/RootStore";
-import { CognitoSessionStore } from "../../../stores/CognitoSessionStore";
-import { CallbackStore } from "../../../stores/CallbackStore";
+import { CathyRaisedButton } from "../../../shared-components/cathy/CathyButton";
 import { AppListStore } from "../../../stores/AppListStore";
 import { AuthenticateStore } from "../../../stores/AuthenticateStore";
 import { BiometricStore } from "../../../stores/BiometricStore";
+import { CallbackStore } from "../../../stores/CallbackStore";
+import { CognitoSessionStore } from "../../../stores/CognitoSessionStore";
+import { AllStores } from "../../../stores/RootStore";
 import { Colors } from "../../../utils/Colors";
-import { CathyRaisedButton } from "../../../shared-components/cathy/CathyButton";
 
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     sessionStore: CognitoSessionStore;
     callbackStore: CallbackStore;
     appListStore: AppListStore;
@@ -44,126 +43,108 @@ interface Props {
  *
  * @author NganNH
  */
-@inject(({ rootStore }: AllStores) => ({
+const SetupMfaSuccessScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
     sessionStore: rootStore.cognitoSessionStore,
     callbackStore: rootStore.callbackStore,
     appListStore: rootStore.appListStore,
     authenticateStore: rootStore.authenticateStore,
     biometricStore: rootStore.biometricStore,
-}))
-export class SetupMfaSuccessScreen extends PureComponent<Props> {
-    static defaultProps = {
-        authenticateStore: undefined,
-        sessionStore: undefined,
-        callbackStore: undefined,
-        appListStore: undefined,
-        biometricStore: undefined,
-    };
-
-    constructor(props: Props) {
-        super(props);
-        this.onFinish = this.onFinish.bind(this);
-    }
-
-    //**************************************************************
-    // Component Lifecycle
-    //****************************************************************
-
-    //**************************************************************
-    // Other Methods
-    //****************************************************************
-
-    private openUrl(url: string): void {
-        const { navigation, callbackStore } = this.props;
-        setTimeout(() => {
-            Linking.openURL(url)
-                .then(() => {
-                    callbackStore.clearCallback();
-                    navigation.navigate("Splash");
-                })
-                .catch(() => {
-                    this.showAlert(
-                        I18n.t("alert.title.error"),
-                        I18n.t("error.not_installed", {
-                            appName: callbackStore.appName,
-                        })
+}))(
+    observer(
+        ({
+            navigation,
+            sessionStore,
+            callbackStore,
+            appListStore,
+            authenticateStore,
+        }) => {
+            const { t } = useTranslation();
+            const showAlert = (title: string, message: string): void => {
+                setTimeout(() => {
+                    Alert.alert(
+                        title,
+                        message,
+                        [{ text: t("alert.button.ok"), style: "cancel" }],
+                        { cancelable: false }
                     );
-                });
-        }, 1000);
-    }
+                }, 100);
+            };
 
-    private showAlert(title: string, message: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                title,
-                message,
-                [{ text: I18n.t("alert.button.ok"), style: "cancel" }],
-                { cancelable: false }
-            );
-        }, 100);
-    }
-    private onFinish() {
-        const { navigation, appListStore } = this.props;
-        appListStore
-            .fetchAppList()
-            .then()
-            .catch((reason) => {
-                console.log(reason);
-            });
-        navigation.navigate("Main/Home");
-    }
-    //**************************************************************
-    // Render
-    //****************************************************************
+            const openUrl = (url: string): void => {
+                setTimeout(() => {
+                    Linking.openURL(url)
+                        .then(() => {
+                            callbackStore.clearCallback();
+                            navigation.navigate("Splash");
+                        })
+                        .catch(() => {
+                            showAlert(
+                                t("alert.title.error"),
+                                t("error.not_installed", {
+                                    appName: callbackStore.appName,
+                                })
+                            );
+                        });
+                }, 1000);
+            };
 
-    render() {
-        const { sessionStore, callbackStore, authenticateStore } = this.props;
-        return (
-            <View style={{ flex: 1, justifyContent: "center" }}>
-                {/* <View style={styles.topSpace} /> */}
-                <View
-                    style={{
-                        backgroundColor: "white",
-                        margin: 20,
-                        padding: 20,
-                    }}
-                >
-                    <Image
-                        style={styles.successImage}
-                        source={require("../../../assets/image/icon/setup-mfa-success.png")}
-                        resizeMode={"contain"}
-                    />
-                    <View style={styles.middleSpace1} />
-                    <View>
-                        <Text style={styles.mainTitle}>
-                            {I18n.t("auth.mfa.success_title")}
-                        </Text>
-                    </View>
-                    <View>
-                        <Text style={styles.subtitle}>
-                            {authenticateStore.mfaSetupType == "SMS"
-                                ? I18n.t("auth.mfa.mfa_setup_sms_successfully")
-                                : I18n.t(
-                                      "auth.mfa.mfa_setup_totp_successfully"
-                                  )}
-                        </Text>
-                    </View>
-                    <View style={styles.bottomSpace} />
-                    <View style={styles.submitContainer}>
-                        <CathyRaisedButton
-                            style={styles.loginButton}
-                            text="Finish"
-                            onPress={this.onFinish}
+            const onFinish = (): void => {
+                appListStore
+                    .fetchAppList()
+                    .then()
+                    .catch((reason) => {
+                        console.log(reason);
+                    });
+                navigation.navigate("Main/Home");
+            };
+
+            return (
+                <View style={styles.container}>
+                    <View style={styles.contentContainer}>
+                        <Image
+                            style={styles.successImage}
+                            source={require("../../../assets/image/icon/setup-mfa-success.png")}
+                            resizeMode={"contain"}
                         />
+                        <View style={styles.middleSpace1} />
+                        <View>
+                            <Text style={styles.mainTitle}>
+                                {t("auth.mfa.success_title")}
+                            </Text>
+                        </View>
+                        <View>
+                            <Text style={styles.subtitle}>
+                                {authenticateStore.mfaSetupType === "SMS"
+                                    ? t("auth.mfa.mfa_setup_sms_successfully")
+                                    : t("auth.mfa.mfa_setup_totp_successfully")}
+                            </Text>
+                        </View>
+                        <View style={styles.bottomSpace} />
+                        <View style={styles.submitContainer}>
+                            <CathyRaisedButton
+                                style={styles.loginButton}
+                                text="Finish"
+                                onPress={onFinish}
+                            />
+                        </View>
                     </View>
                 </View>
-            </View>
-        );
-    }
-}
+            );
+        }
+    )
+);
 
 const screenHeight = Dimensions.get("screen").height;
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: "center",
+    },
+    contentContainer: {
+        backgroundColor: "white",
+        margin: 20,
+        padding: 20,
+    },
     topSpace: {
         height: (40 * (screenHeight - 222)) / 509,
     },
@@ -198,3 +179,5 @@ const styles = StyleSheet.create({
         marginVertical: 20,
     },
 });
+
+export { SetupMfaSuccessScreen };

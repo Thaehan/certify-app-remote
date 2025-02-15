@@ -19,11 +19,11 @@
         },
         "login": {
             "initial_title": "你好!",
-            "initial_subtitle": "登入到 %{appName}",
+            "initial_subtitle": "登入到 {{appName}}",
             "mfa_title": "安全驗證",
             "success_title": "您已登入!",
-            "success_subtitle": "嗨 %{name}",
-            "success_info": "請稍後，正在返回 %{appName}",
+            "success_subtitle": "嗨 {{name}}",
+            "success_info": "請稍後，正在返回 {{appName}}",
             "login_button": "登入",
             "forgot_button": "忘記密碼?",
             "update_button": "更改",
@@ -34,14 +34,14 @@
             "initial_title": "重置密碼",
             "initial_subtitle": "輸入您的員工編號",
             "success_title": "重置密碼成功!",
-            "success_info": "正在返回登入頁面 %{count}",
+            "success_info": "正在返回登入頁面 {{count}}",
             "next_button": "下一步",
             "proceed_button": "繼續"
         },
         "sso": {
             "title": "歡迎回來",
-            "subtitle": "已經以 %{name} 的身份登入",
-            "continue_button": "返回到 %{appName}",
+            "subtitle": "已經以 {{name}} 的身份登入",
+            "continue_button": "返回到 {{appName}}",
             "another_button": "使用其它賬戶登入"
         },
         "biometrics": {
@@ -57,9 +57,9 @@
         "activate": {
             "activate_button": "激活"
         },
-        "otp_phone": "一次性密碼已發送到您的手機 %{value}",
-        "otp_email": "一次性密碼已發送至您的電郵 %{value}",
-        "otp_count": "重新發送 %{count}",
+        "otp_phone": "一次性密碼已發送到您的手機 {{value}}",
+        "otp_email": "一次性密碼已發送至您的電郵 {{value}}",
+        "otp_count": "重新發送 {{count}}",
         "otp_button": "重新發送",
         "eight_characters_long": "至少8個字符\n",
         "upper_case": "至少一個大寫字符\n",
@@ -80,7 +80,7 @@
         "sms_setup": {
             "title": "Set up SMS",
             "mfa": "MFA",
-            "otp_phone": "we have delivered the authentication code by SMS to %{value}. Please enter the code to complete authentication",
+            "otp_phone": "we have delivered the authentication code by SMS to {{value}}. Please enter the code to complete authentication",
             "verification_failed": "TOTP verification failed",
             "verification_failed_title": "error!"
         },
@@ -165,8 +165,8 @@
         "exit_temp_password": "你想回去登錄啊?",
         "exit_reset": "你想回去登錄啊?",
         "password_success": "密碼修改成功",
-        "activate_success": "一封郵件已發送至 %{email}",
-        "not_installed": "%{appName} 未安裝，點擊“確定”前往下載"
+        "activate_success": "一封郵件已發送至 {{email}}",
+        "not_installed": "{{appName}} 未安裝，點擊“確定”前往下載"
     },
 
     "locale": {
@@ -183,7 +183,7 @@
     },
 
     "error": {
-        "not_installed": "%{appName} 未安裝。",
+        "not_installed": "{{appName}} 未安裝。",
         "no_valid_email": "您沒有電子信箱。",
         "no_verified_email": "請完成您的登入嘗試。",
         "Default": "出現問題，請聯繫 IS 服務台。",

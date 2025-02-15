@@ -8,12 +8,7 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, {
-    PureComponent,
-    ReactNode,
-    ReactText,
-    Fragment,
-} from 'react';
+import React, { PureComponent, ReactNode, ReactText, Fragment } from "react";
 import {
     View,
     Text,
@@ -27,10 +22,10 @@ import {
     TouchableOpacity,
     Platform,
     StyleSheet,
-} from 'react-native';
-import {Picker, PickerItemProps} from '@react-native-picker/picker';
+} from "react-native";
+import { Picker, PickerItemProps } from "@react-native-picker/picker";
 
-import { Colors } from '../utils/Colors';
+import { Colors } from "../utils/Colors";
 
 interface Props {
     style: StyleProp<ViewStyle>;
@@ -40,7 +35,7 @@ interface Props {
     triggerArrowColor: string;
     selectedValue: ReactText;
     onValueChange: (itemValue: any, index: number) => void;
-    children : ReactNode
+    children: ReactNode;
 }
 interface StateIOS {
     isShowing: boolean;
@@ -54,7 +49,6 @@ interface StateIOS {
  * @author Lingqi
  */
 export class Select extends PureComponent<Props, StateIOS> {
-
     static defaultProps = {
         style: undefined,
         enabled: true,
@@ -62,7 +56,7 @@ export class Select extends PureComponent<Props, StateIOS> {
         triggerTextStyle: undefined,
         triggerArrowColor: Colors.unfocusedIcon,
         selectedValue: undefined,
-        onValueChange: () => { }
+        onValueChange: () => {},
     };
     static Item: typeof SelectItem;
 
@@ -70,8 +64,8 @@ export class Select extends PureComponent<Props, StateIOS> {
 
     constructor(props: Props) {
         super(props);
-        this.labelValue = '';
-        if (Platform.OS === 'ios') {
+        this.labelValue = "";
+        if (Platform.OS === "ios") {
             this.state = {
                 isShowing: false,
                 selectedValue: props.selectedValue,
@@ -80,17 +74,21 @@ export class Select extends PureComponent<Props, StateIOS> {
             this.onPressTriggerIOS = this.onPressTriggerIOS.bind(this);
             this.onPressCancelIOS = this.onPressCancelIOS.bind(this);
             this.onPressDoneIOS = this.onPressDoneIOS.bind(this);
-            this.onPickerValueChangedIOS = this.onPickerValueChangedIOS.bind(this);
+            this.onPickerValueChangedIOS =
+                this.onPickerValueChangedIOS.bind(this);
         }
     }
 
     componentDidUpdate(prevProps: Props, prevState: StateIOS) {
-        if (Platform.OS === 'ios') {
+        if (Platform.OS === "ios") {
             const { selectedValue } = this.props;
-            if (selectedValue !== prevProps.selectedValue && this.state.selectedIndex !== -1) {
+            if (
+                selectedValue !== prevProps.selectedValue &&
+                this.state.selectedIndex !== -1
+            ) {
                 this.setState({
                     selectedValue,
-                    selectedIndex: -1
+                    selectedIndex: -1,
                 });
             }
         }
@@ -123,24 +121,31 @@ export class Select extends PureComponent<Props, StateIOS> {
     }
 
     render() {
-        return Platform.OS === 'android' ? this.renderAndroid() : this.renderIOS();
+        return Platform.OS === "android"
+            ? this.renderAndroid()
+            : this.renderIOS();
     }
 
     private renderAndroid(): ReactNode {
         const children = this.renderAndroidItem();
+
+        console.log("renderAndroid", this.state?.isShowing);
+
         return (
             <View style={[this.props.style, styles.selectTrigger]}>
                 <Picker
                     style={styles.androidNativeSelect}
-                    mode={'dropdown'}
+                    mode={"dropdown"}
                     enabled={this.props.enabled}
                     selectedValue={this.props.selectedValue}
-                    onValueChange={this.props.onValueChange}>
+                    onValueChange={this.props.onValueChange}
+                >
                     {children}
                 </Picker>
                 <Text
                     style={[styles.triggerText, this.props.triggerTextStyle]}
-                    numberOfLines={1}>
+                    numberOfLines={1}
+                >
                     {this.props.triggerValue || this.labelValue}
                 </Text>
                 {/* <Image
@@ -155,53 +160,67 @@ export class Select extends PureComponent<Props, StateIOS> {
 
     private renderIOS(): ReactNode {
         const children = this.renderIOSItem();
+
+        console.log("renderIOS", this.state?.isShowing);
+
         return (
             <Fragment>
                 <TouchableWithoutFeedback
                     disabled={!this.props.enabled}
-                    onPress={this.onPressTriggerIOS}>
+                    onPress={this.onPressTriggerIOS}
+                >
                     <View style={[this.props.style, styles.selectTrigger]}>
                         <Text
-                            style={[styles.triggerText, this.props.triggerTextStyle]}
-                            numberOfLines={1}>
+                            style={[
+                                styles.triggerText,
+                                this.props.triggerTextStyle,
+                            ]}
+                            numberOfLines={1}
+                        >
                             {this.props.triggerValue || this.labelValue}
                         </Text>
                         <Image
                             style={[
                                 styles.triggerArrow,
-                                { tintColor: this.props.triggerArrowColor }]}
-                            source={require('../assets/image/dropdown.png')}
-                            resizeMode={'contain'} />
+                                { tintColor: this.props.triggerArrowColor },
+                            ]}
+                            source={require("../assets/image/dropdown.png")}
+                            resizeMode={"contain"}
+                        />
                     </View>
                 </TouchableWithoutFeedback>
                 <Modal
-                    animationType={'fade'}
+                    animationType={"fade"}
                     transparent={true}
                     visible={this.state.isShowing}
-                    onRequestClose={() => { }}>
+                    onRequestClose={() => {}}
+                >
                     <View style={styles.iOSPickerContainer}>
                         <View style={styles.iOSTopSpace} />
                         <SafeAreaView style={styles.iOSSafeArea}>
                             <View style={styles.iOSDoneBar}>
                                 <TouchableOpacity
                                     style={styles.iOSDoneButton}
-                                    onPress={this.onPressCancelIOS}>
+                                    onPress={this.onPressCancelIOS}
+                                >
                                     <Text style={styles.iOSDoneButtonText}>
-                                        {'Cancel'}
+                                        {"Cancel"}
                                     </Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.iOSDoneButton}
-                                    onPress={this.onPressDoneIOS}>
+                                    onPress={this.onPressDoneIOS}
+                                >
                                     <Text style={styles.iOSDoneButtonText}>
-                                        {'Done'}
+                                        {"Done"}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
                             <Picker
                                 itemStyle={styles.iOSItemStyle}
                                 selectedValue={this.state.selectedValue}
-                                onValueChange={this.onPickerValueChangedIOS}>
+                                onValueChange={this.onPickerValueChangedIOS}
+                            >
                                 {children}
                             </Picker>
                         </SafeAreaView>
@@ -212,36 +231,48 @@ export class Select extends PureComponent<Props, StateIOS> {
     }
 
     private renderAndroidItem(): ReactNode {
-        return React.Children.map(this.props.children as SelectItem[], (child, index) => {
-            const { testID, value, selectedColor } = child.props;
-            let { label, color } = child.props;
-            if (value === this.props.selectedValue) {
-                this.labelValue = label;
-                color = color || selectedColor;
+        return React.Children.map(
+            this.props.children as SelectItem[],
+            (child, index) => {
+                const { testID, value, selectedColor } = child.props;
+                let { label, color } = child.props;
+                if (value === this.props.selectedValue) {
+                    this.labelValue = label;
+                    color = color || selectedColor;
+                }
+                if (Platform.Version >= 21) {
+                    label += " ";
+                }
+                return (
+                    <Picker.Item
+                        testID={testID}
+                        label={label}
+                        value={value}
+                        color={color || Colors.majorText}
+                    />
+                );
             }
-            if (Platform.Version >= 21) {
-                label += ' ';
-            }
-            return (
-                <Picker.Item
-                    testID={testID} label={label} value={value}
-                    color={color || Colors.majorText} />
-            );
-        });
+        );
     }
 
     private renderIOSItem(): ReactNode {
-        return React.Children.map(this.props.children as SelectItem[], (child, index) => {
-            const { testID, label, value, color } = child.props;
-            if (value === this.props.selectedValue) {
-                this.labelValue = label;
+        return React.Children.map(
+            this.props.children as SelectItem[],
+            (child, index) => {
+                const { testID, label, value, color } = child.props;
+                if (value === this.props.selectedValue) {
+                    this.labelValue = label;
+                }
+                return (
+                    <Picker.Item
+                        testID={testID}
+                        label={label}
+                        value={value}
+                        color={color || Colors.majorText}
+                    />
+                );
             }
-            return (
-                <Picker.Item
-                    testID={testID} label={label} value={value}
-                    color={color || Colors.majorText} />
-            );
-        });
+        );
     }
 }
 
@@ -258,30 +289,30 @@ Select.Item = SelectItem;
 
 const styles = StyleSheet.create({
     selectTrigger: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
     },
     triggerText: {
         flex: 1,
         paddingRight: 24,
         paddingLeft: 12,
         fontSize: 16,
-        fontFamily: 'Roboto-Regular',
+        fontFamily: "Roboto-Regular",
         letterSpacing: 0.5,
-        color: Colors.majorText
+        color: Colors.majorText,
     },
     triggerArrow: {
-        position: 'absolute',
+        position: "absolute",
         width: 24,
         height: 24,
         right: 0,
-        top: '50%',
+        top: "50%",
         marginTop: -12,
     },
     androidNativeSelect: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'transparent',
-        color: 'transparent'
+        backgroundColor: "transparent",
+        color: "transparent",
     },
 
     iOSPickerContainer: {
@@ -292,31 +323,31 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     iOSItemStyle: {
-        backgroundColor: 'white',
+        backgroundColor: "white",
     },
     iOSDoneBar: {
         height: 44,
-        backgroundColor: '#EFF1F2',
+        backgroundColor: "#EFF1F2",
         borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: '#919498',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        borderTopColor: "#919498",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
     },
     iOSDoneButton: {
         height: 44,
         marginHorizontal: 8,
         paddingHorizontal: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
     },
     iOSDoneButtonText: {
         fontSize: 15,
-        fontFamily: 'Roboto-Medium',
+        fontFamily: "Roboto-Medium",
         letterSpacing: 1.25,
-        color: '#007AFE',
+        color: "#007AFE",
     },
     iOSSafeArea: {
-        backgroundColor: 'white',
+        backgroundColor: "white",
     },
 });

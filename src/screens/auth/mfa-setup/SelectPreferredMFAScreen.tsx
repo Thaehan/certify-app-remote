@@ -8,82 +8,64 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, { PureComponent } from "react";
-import {
-    View,
-    Text,
-    StyleSheet,
-    Dimensions,
-    Keyboard,
-    Image,
-    TouchableOpacity,
-} from "react-native";
 import { inject, observer } from "mobx-react";
+import React, { FC, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+    Dimensions,
+    Image,
+    Keyboard,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { CathyRaisedButton } from "../../../shared-components/cathy/CathyButton";
 import { AuthenticateStore } from "../../../stores/AuthenticateStore";
 import { AllStores } from "../../../stores/RootStore";
 import { Colors } from "../../../utils/Colors";
-import { NavigationRoute, NavigationScreenProp } from "react-navigation";
-import I18n from "i18n-js";
-import { CathyRaisedButton } from "../../../shared-components/cathy/CathyButton";
 
 interface Props {
     authenticateStore: AuthenticateStore;
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
 }
-interface State {
-    method: "SMS" | "TOTP" | null;
-}
-@inject(({ rootStore }: AllStores) => ({
-    authenticateStore: rootStore.authenticateStore,
-}))
+
+type MFAMethod = "SMS" | "TOTP" | null;
+
 /**
  * 'MFA' step of login flow
  *
  * @author NganNH
  */
-@observer
-class SelectPreferredMFAScreen extends PureComponent<Props, State> {
-    static defaultProps = {
-        authenticateStore: undefined,
-    };
+const SelectPreferredMFAScreen: FC<Props> = inject(
+    ({ rootStore }: AllStores) => ({
+        authenticateStore: rootStore.authenticateStore,
+    })
+)(
+    observer(({ authenticateStore }) => {
+        const { t } = useTranslation();
+        const [method, setMethod] = useState<MFAMethod>("TOTP");
 
-    constructor(props: Props) {
-        super(props);
-
-        this.state = {
-            method: "TOTP",
+        const handleSelectTOTP = async (): Promise<void> => {
+            await authenticateStore.associateSoftwareToken();
         };
-        this.onPressBackground = this.onPressBackground.bind(this);
-        this.setMethod = this.setMethod.bind(this);
-        this.handleSelectPreferMethod =
-            this.handleSelectPreferMethod.bind(this);
-    }
-    componentDidMount() {}
 
-    handleSelectTOTP = async () => {
-        await this.props.authenticateStore.associateSoftwareToken();
-    };
+        const handleSelectSMS = async (): Promise<void> => {
+            await authenticateStore.selectPreferSms();
+        };
 
-    handleSelectSMS = async () => {
-        await this.props.authenticateStore.selectPreferSms();
-    };
-    //**************************************************************
-    // Button Callbacks
-    //****************************************************************
-    private onPressBackground(): void {
-        Keyboard.dismiss();
-    }
-    private setMethod(method: "SMS" | "TOTP" | null): void {
-        this.setState({ method: method });
-    }
-    private handleSelectPreferMethod(): void {
-        if (this.state.method == "SMS") {
-            this.handleSelectSMS();
-        } else if (this.state.method == "TOTP") {
-            this.handleSelectTOTP();
-        }
-    }
-    render() {
+        const onPressBackground = (): void => {
+            Keyboard.dismiss();
+        };
+
+        const handleSelectPreferMethod = (): void => {
+            if (method === "SMS") {
+                handleSelectSMS();
+            } else if (method === "TOTP") {
+                handleSelectTOTP();
+            }
+        };
+
         return (
             <>
                 <View style={styles.topSpace} />
@@ -91,37 +73,33 @@ class SelectPreferredMFAScreen extends PureComponent<Props, State> {
                     <View style={styles.container}>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>
-                                {I18n.t("auth.select_prefer_method.title")}
+                                {t("auth.select_prefer_method.title")}
                                 <Text style={styles.mfaText}>
-                                    {I18n.t("auth.select_prefer_method.mfa")}
+                                    {t("auth.select_prefer_method.mfa")}
                                 </Text>
                             </Text>
                             <Text style={styles.subTitle}>
-                                {I18n.t("auth.select_prefer_method.sub")}
+                                {t("auth.select_prefer_method.sub")}
                             </Text>
                         </View>
-                        <TouchableOpacity onPress={() => this.setMethod("SMS")}>
+                        <TouchableOpacity onPress={() => setMethod("SMS")}>
                             <View
                                 style={[
                                     styles.preferItemContainer,
-                                    this.state.method === "SMS"
+                                    method === "SMS"
                                         ? styles.preferItemContainerActive
                                         : null,
                                 ]}
                             >
-                                {this.state.method === "SMS" ? (
-                                    <Image
-                                        style={styles.radioButton}
-                                        source={require("../../../assets/image/icon/radio_checked.png")}
-                                        resizeMode={"contain"}
-                                    />
-                                ) : (
-                                    <Image
-                                        source={require("../../../assets/image/icon/radio_uncheck.png")}
-                                        resizeMode={"contain"}
-                                        style={styles.radioButton}
-                                    />
-                                )}
+                                <Image
+                                    style={styles.radioButton}
+                                    source={
+                                        method === "SMS"
+                                            ? require("../../../assets/image/icon/radio_checked.png")
+                                            : require("../../../assets/image/icon/radio_uncheck.png")
+                                    }
+                                    resizeMode={"contain"}
+                                />
                                 <View>
                                     <Image
                                         style={styles.otpImage}
@@ -131,12 +109,10 @@ class SelectPreferredMFAScreen extends PureComponent<Props, State> {
                                 </View>
                                 <View>
                                     <Text style={styles.smsMethodTitle}>
-                                        {I18n.t(
-                                            "auth.select_prefer_method.sms"
-                                        )}
+                                        {t("auth.select_prefer_method.sms")}
                                     </Text>
                                     <Text style={styles.smsMethodSub}>
-                                        {I18n.t(
+                                        {t(
                                             "auth.select_prefer_method.sms_guide"
                                         )}
                                     </Text>
@@ -144,30 +120,24 @@ class SelectPreferredMFAScreen extends PureComponent<Props, State> {
                             </View>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            onPress={() => this.setMethod("TOTP")}
-                        >
+                        <TouchableOpacity onPress={() => setMethod("TOTP")}>
                             <View
                                 style={[
                                     styles.preferItemContainer,
-                                    this.state.method === "TOTP"
+                                    method === "TOTP"
                                         ? styles.preferItemContainerActive
                                         : null,
                                 ]}
                             >
-                                {this.state.method === "TOTP" ? (
-                                    <Image
-                                        style={styles.radioButton}
-                                        source={require("../../../assets/image/icon/radio_checked.png")}
-                                        resizeMode={"contain"}
-                                    />
-                                ) : (
-                                    <Image
-                                        source={require("../../../assets/image/icon/radio_uncheck.png")}
-                                        resizeMode={"contain"}
-                                        style={styles.radioButton}
-                                    />
-                                )}
+                                <Image
+                                    style={styles.radioButton}
+                                    source={
+                                        method === "TOTP"
+                                            ? require("../../../assets/image/icon/radio_checked.png")
+                                            : require("../../../assets/image/icon/radio_uncheck.png")
+                                    }
+                                    resizeMode={"contain"}
+                                />
                                 <View>
                                     <Image
                                         style={styles.otpImage}
@@ -177,12 +147,12 @@ class SelectPreferredMFAScreen extends PureComponent<Props, State> {
                                 </View>
                                 <View>
                                     <Text style={styles.smsMethodTitle}>
-                                        {I18n.t(
+                                        {t(
                                             "auth.select_prefer_method.authentication_app"
                                         )}
                                     </Text>
                                     <Text style={styles.smsMethodSub}>
-                                        {I18n.t(
+                                        {t(
                                             "auth.select_prefer_method.authentication_app_guide"
                                         )}
                                     </Text>
@@ -193,18 +163,17 @@ class SelectPreferredMFAScreen extends PureComponent<Props, State> {
                         <CathyRaisedButton
                             style={styles.loginButton}
                             text="SUBMIT MFA METHOD"
-                            onPress={this.handleSelectPreferMethod}
-                            disabled={this.state.method == null}
+                            onPress={handleSelectPreferMethod}
+                            disabled={method == null}
                         />
                     </View>
                     <View style={styles.bottomSpace} />
                 </View>
             </>
         );
-    }
-}
+    })
+);
 
-export default SelectPreferredMFAScreen;
 const screenHeight = Dimensions.get("screen").height;
 const styles = StyleSheet.create({
     topSpace: {
@@ -287,3 +256,5 @@ const styles = StyleSheet.create({
         height: 24,
     },
 });
+
+export default SelectPreferredMFAScreen;

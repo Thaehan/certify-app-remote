@@ -8,20 +8,20 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import {
-    observable,
-    action,
-    runInAction,
-} from 'mobx';
-import { CognitoUser } from 'amazon-cognito-identity-js';
-import { Crypto } from '../nativeUtils/Crypto';
-import { I18n } from '../utils/I18n';
-import { HttpClient } from '../utils/HttpClient';
-import { Environment } from '../utils/Environment';
-import { RootStore } from './RootStore';
+import { observable, action, runInAction } from "mobx";
+import { CognitoUser } from "amazon-cognito-identity-js";
+import { Crypto } from "../nativeUtils/Crypto";
+import { toErrorMessage } from "../utils/I18n";
+import { HttpClient } from "../utils/HttpClient";
+import { Environment } from "../utils/Environment";
+import { RootStore } from "./RootStore";
 
-type UserStatus = 'NO_EMAIL' | 'EMAIL_NOT_VERIFIED' | 'FORCE_CHANGE_PASSWORD' | 'CONFIRMED';
-export type Step = 'Initial' | 'Verify' | 'Success';
+type UserStatus =
+    | "NO_EMAIL"
+    | "EMAIL_NOT_VERIFIED"
+    | "FORCE_CHANGE_PASSWORD"
+    | "CONFIRMED";
+export type Step = "Initial" | "Verify" | "Success";
 
 /**
  * Service handle cognito forgot password flow and activation
@@ -29,7 +29,6 @@ export type Step = 'Initial' | 'Verify' | 'Success';
  * @author Lingqi
  */
 export class ForgotPasswordStore {
-
     private rootStore: RootStore;
     private cognitoUser!: CognitoUser;
 
@@ -41,12 +40,12 @@ export class ForgotPasswordStore {
 
     constructor(rootStore: RootStore) {
         this.rootStore = rootStore;
-        this.step = 'Initial';
+        this.step = "Initial";
         this.emptyPassword = true;
         this.isFetching = false;
         this._verifyDetail = {
-            type: 'email',
-            value: 'username@email.com'
+            type: "email",
+            value: "username@email.com",
         };
     }
 
@@ -58,32 +57,36 @@ export class ForgotPasswordStore {
     checkStatus(username: string): Promise<UserStatus> {
         this.isFetching = true;
         return new Promise((resolve, reject) => {
-            const salt = 'wsbCVtBeaKCTCBhHpFeakfbWUdHGwSp';
+            const salt = "wsbCVtBeaKCTCBhHpFeakfbWUdHGwSp";
             const userPoolId = this.rootStore.userPoolStore.userPoolId;
             const dataBytes = this.encode(salt + userPoolId + username);
-            Crypto.digest('SHA-1', dataBytes).then((digestBytes) => {
-                const signature = this.bytesToHex(digestBytes);
-                const url = Environment.endPoint + `/user/status/${userPoolId}/${username}`;
-                const params = { s: signature };
-                HttpClient.get<StatusResponse>(url, { params })
-                    .then((response) => {
-                        runInAction(() => {
-                            this.isFetching = false;
-                            resolve(response.status);
+            Crypto.digest("SHA-1", dataBytes)
+                .then((digestBytes) => {
+                    const signature = this.bytesToHex(digestBytes);
+                    const url =
+                        Environment.endPoint +
+                        `/user/status/${userPoolId}/${username}`;
+                    const params = { s: signature };
+                    HttpClient.get<StatusResponse>(url, { params })
+                        .then((response) => {
+                            runInAction(() => {
+                                this.isFetching = false;
+                                resolve(response.status);
+                            });
+                        })
+                        .catch((reason) => {
+                            runInAction(() => {
+                                this.isFetching = false;
+                                reject(toErrorMessage(reason));
+                            });
                         });
-                    })
-                    .catch((reason) => {
-                        runInAction(() => {
-                            this.isFetching = false;
-                            reject(I18n.toErrorMessage(reason));
-                        });
+                })
+                .catch((error: Error) => {
+                    runInAction(() => {
+                        this.isFetching = false;
+                        reject(toErrorMessage(error.message));
                     });
-            }).catch((error: Error) => {
-                runInAction(() => {
-                    this.isFetching = false;
-                    reject(I18n.toErrorMessage(error.message));
                 });
-            });
         });
     }
 
@@ -91,23 +94,24 @@ export class ForgotPasswordStore {
     forgotPassword(username: string): Promise<undefined> {
         this.isFetching = true;
         return new Promise((resolve, reject) => {
-            this.cognitoUser = this.rootStore.userPoolStore.createCognitoUser(username);
+            this.cognitoUser =
+                this.rootStore.userPoolStore.createCognitoUser(username);
             this.cognitoUser.forgotPassword({
-                onSuccess: () => { },
+                onSuccess: () => {},
                 onFailure: (err) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
                 inputVerificationCode: (data) => {
                     this._verifyDetail = {
-                        type: data['CodeDeliveryDetails']['AttributeName'],
-                        value: data['CodeDeliveryDetails']['Destination']
+                        type: data["CodeDeliveryDetails"]["AttributeName"],
+                        value: data["CodeDeliveryDetails"]["Destination"],
                     };
                     runInAction(() => {
                         this.isFetching = false;
-                        this.step = 'Verify';
+                        this.step = "Verify";
                     });
                 },
             });
@@ -119,11 +123,11 @@ export class ForgotPasswordStore {
         this.isFetching = true;
         return new Promise((resolve, reject) => {
             this.cognitoUser.forgotPassword({
-                onSuccess: () => { },
+                onSuccess: () => {},
                 onFailure: (err) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
                 inputVerificationCode: () => {
@@ -136,20 +140,23 @@ export class ForgotPasswordStore {
     }
 
     @action
-    confirmPassword(verificationCode: string, password: string): Promise<undefined> {
+    confirmPassword(
+        verificationCode: string,
+        password: string
+    ): Promise<undefined> {
         this.isFetching = true;
         return new Promise((resolve, reject) => {
             this.cognitoUser.confirmPassword(verificationCode, password, {
                 onSuccess: () => {
                     runInAction(() => {
                         this.isFetching = false;
-                        this.step = 'Success';
+                        this.step = "Success";
                     });
                 },
                 onFailure: (err) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
             });
@@ -159,30 +166,30 @@ export class ForgotPasswordStore {
     @action
     emptyPasswordCheck(password: string) {
         runInAction(() => {
-            this.emptyPassword = password.length < 1 ;
-        })
+            this.emptyPassword = password.length < 1;
+        });
     }
 
     @action
     clearStates() {
-        this.step = 'Initial';
+        this.step = "Initial";
         this.isFetching = false;
         this.emptyPassword = false;
     }
 
     activate(username: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            const url = Environment.endPoint + '/activate';
+            const url = Environment.endPoint + "/activate";
             const body = {
                 userPoolId: this.rootStore.userPoolStore.userPoolId,
-                username
+                username,
             };
             HttpClient.post<ActivateResponse>(url, { body })
                 .then((response) => {
                     resolve(response.email);
                 })
                 .catch((reason) => {
-                    reject(I18n.toErrorMessage(reason));
+                    reject(toErrorMessage(reason));
                 });
         });
     }
@@ -196,10 +203,10 @@ export class ForgotPasswordStore {
     }
 
     private bytesToHex(bytes: Uint8Array): string {
-        let hex = '';
+        let hex = "";
         for (let i = 0; i < bytes.length; i++) {
             if (bytes[i] < 16 && i >= 0) {
-                hex += '0';
+                hex += "0";
             }
             hex += bytes[i].toString(16);
         }
@@ -208,7 +215,7 @@ export class ForgotPasswordStore {
 }
 
 export interface VerifyDetail {
-    type: 'phone_number' | 'email';
+    type: "phone_number" | "email";
     value: string;
 }
 interface StatusResponse {

@@ -17,12 +17,12 @@
         },
         "login": {
             "initial_title": "Hello!",
-            "initial_subtitle": "Signing in to %{appName}",
+            "initial_subtitle": "Signing in to {{appName}}",
             "mfa_title": "Security Verification",
             "mfa_subtitle": "Enter code from your Authenticator app",
             "success_title": "You've signed in!",
-            "success_subtitle": "Hi %{name}",
-            "success_info": "Hold on while going back to %{appName}",
+            "success_subtitle": "Hi {{name}}",
+            "success_info": "Hold on while going back to {{appName}}",
             "login_button": "Sign in",
             "forgot_button": "Forgot Password?",
             "update_button": "Update",
@@ -32,14 +32,14 @@
             "initial_title": "Reset Password",
             "initial_subtitle": "Enter your Staff ID",
             "success_title": "Reset Password Success!",
-            "success_info": "Returning to sign-in page %{count}",
+            "success_info": "Returning to sign-in page {{count}}",
             "next_button": "Next",
             "proceed_button": "Proceed"
         },
         "sso": {
             "title": "Welcome Back",
-            "subtitle": "Signed in as %{name}",
-            "continue_button": "Back to %{appName}",
+            "subtitle": "Signed in as {{name}}",
+            "continue_button": "Back to {{appName}}",
             "another_button": "Sign in Using Another Account"
         },
         "biometrics": {
@@ -58,9 +58,9 @@
         "activate": {
             "activate_button": "Activate"
         },
-        "otp_phone": "OTP sent to your phone %{value}",
-        "otp_email": "OTP sent to your email %{value}",
-        "otp_count": "Resend OTP %{count}",
+        "otp_phone": "OTP sent to your phone {{value}}",
+        "otp_email": "OTP sent to your email {{value}}",
+        "otp_count": "Resend OTP {{count}}",
         "otp_button": "Resend OTP",
         "eight_characters_long": "At least 8 characters long\n",
         "upper_case": "At least one uppercase character\n",
@@ -82,7 +82,7 @@
         "sms_setup": {
             "title": "Set up SMS",
             "mfa": "MFA",
-            "otp_phone": "we have delivered the authentication code by SMS to %{value}. Please enter the code to complete authentication",
+            "otp_phone": "we have delivered the authentication code by SMS to {{value}}. Please enter the code to complete authentication",
             "verification_failed": "TOTP verification failed",
             "verification_failed_title": "error!"
         },
@@ -166,8 +166,8 @@
         "exit_temp_password": "Do you want to go back to login?",
         "exit_reset": "Do you want to go back to login?",
         "password_success": "Password changed successfully!",
-        "activate_success": "An email has been sent to %{email}.",
-        "not_installed": "%{appName} not installed, click 'OK' to download.",
+        "activate_success": "An email has been sent to {{email}}.",
+        "not_installed": "{{appName}} not installed, click 'OK' to download.",
         "session_expired": "Your sign in session has expired!",
         "phone_number_require": "Your account doesn't have phone number, please contact IS Helpdesk for assistance."
     },
@@ -183,7 +183,7 @@
         "build": "Build"
     },
     "error": {
-        "not_installed": "%{appName} not installed.",
+        "not_installed": "{{appName}} not installed.",
         "no_valid_email": "Invalid email, please contact IS Helpdesk for assistance.",
         "no_verified_email": "Account not yet activated, please activate your account.",
         "Default": "Request failed, please contact IS Helpdesk for assistance.",

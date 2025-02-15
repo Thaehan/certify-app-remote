@@ -1,33 +1,16 @@
-import React, { Component, PureComponent } from "react";
-import {
-    Text,
-    View,
-    StyleSheet,
-    Alert,
-    Modal,
-    Image,
-    Button,
-} from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { inject, observer } from "mobx-react";
-import {
-    NavigationScreenProp,
-    NavigationRoute,
-    NavigationScreenConfig,
-    NavigationStackScreenOptions,
-} from "react-navigation";
-import { I18n } from "../../../utils/I18n";
-import { Colors } from "../../../utils/Colors";
+import React, { FC, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet, Text, View } from "react-native";
+import { CathyRaisedButton } from "../../../shared-components/cathy/CathyButton";
 import { Select } from "../../../shared-components/Select";
-import { RootStore, AllStores } from "../../../stores/RootStore";
-import {
-    CathyRaisedButton,
-    CathyTextButton,
-} from "../../../shared-components/cathy/CathyButton";
-import { NavigationService } from "../../../navigators/NavigationService";
-import { AuthenticateStore } from "../../../stores/AuthenticateStore";
 import { Spinner } from "../../../shared-components/Spinner";
-import NoneMfaConfirmModal from "./modal/NoneMfaConfirmModal";
+import { AuthenticateStore } from "../../../stores/AuthenticateStore";
 import { CognitoSessionStore } from "../../../stores/CognitoSessionStore";
+import { AllStores, RootStore } from "../../../stores/RootStore";
+import { Colors } from "../../../utils/Colors";
+import NoneMfaConfirmModal from "./modal/NoneMfaConfirmModal";
 
 enum PreferMethod {
     TOTP = "SOFTWARE_TOKEN_MFA",
@@ -41,112 +24,91 @@ type MfaTypeList = {
     value: MfaTypeSelection;
 };
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     rootStore: RootStore;
     authenticationStore: AuthenticateStore;
     sessionStore: CognitoSessionStore;
 }
-interface State {
-    modalVisible: boolean;
-    mfaOptionList: MfaTypeList[];
-    currentMFA: string;
-}
 
-@inject(({ rootStore }: AllStores) => ({
-    rootStore,
-    authenticationStore: rootStore.authenticateStore,
-    sessionStore: rootStore.cognitoSessionStore,
-}))
-@observer
-export class ProfileMfaSettingsScreen extends Component<Props, State> {
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            modalVisible: false,
-            mfaOptionList: [],
-            currentMFA: "",
-        };
-        this.onChange = this.onChange.bind(this);
-        this.onSubmit = this.onSubmit.bind(this);
-        this.handleSelectTOTP = this.handleSelectTOTP.bind(this);
-        this.onClearAll = this.onClearAll.bind(this);
-        this.setModalVisible = this.setModalVisible.bind(this);
-    }
+const ProfileMfaSettingsScreen: FC<Props> = inject(
+    ({ rootStore }: AllStores) => ({
+        rootStore,
+        authenticationStore: rootStore.authenticateStore,
+        sessionStore: rootStore.cognitoSessionStore,
+    })
+)(
+    observer(({ authenticationStore }) => {
+        const { t } = useTranslation();
+        const navigation = useNavigation<any>();
+        const [modalVisible, setModalVisible] = useState(false);
+        const [currentMFA, setCurrentMFA] = useState("");
 
-    static navigationOptions: NavigationScreenConfig<NavigationStackScreenOptions> =
-        ({ navigation }) => {
-            return {
-                title: I18n.t("profile.item.mfa_setting"),
-            };
-        };
-
-    componentDidMount(): void {
-        this.props.authenticationStore.getUserData().then(() => {
-            this.setState({
-                currentMFA: this.props.authenticationStore.preferredMfaSetting,
+        useEffect(() => {
+            navigation.setOptions({
+                title: t("profile.item.mfa_setting"),
             });
-        });
-        this.props.authenticationStore.getUserPoolMFAOptions();
-    }
-    private onChange(method: PreferMethod): void {
-        this.props.authenticationStore.setPreferredMfaSetting(method);
-    }
-    private onSubmit(): void {
-        let { authenticationStore } = this.props;
+        }, []);
 
-        if (authenticationStore.preferredMfaSetting === PreferMethod.None) {
-            this.setModalVisible(true);
-        } else if (
-            authenticationStore.preferredMfaSetting === PreferMethod.TOTP
-        ) {
-            this.handleSelectTOTP();
-            // Implement form submission here for other cases
-        } else if (
-            authenticationStore.preferredMfaSetting === PreferMethod.SMS
-        ) {
-            this.handleSelectSMS();
-        }
-    }
-    private setModalVisible(visible: boolean): void {
-        this.setState({ modalVisible: visible });
-    }
-    handleSelectTOTP() {
-        this.props.authenticationStore.associateSoftwareToken();
-        NavigationService.navigate("Auth/Login");
-    }
-    handleSelectSMS() {
-        let smsMfaSettings = {
-            PreferredMfa: true,
-            Enabled: true,
+        useEffect(() => {
+            authenticationStore.getUserData().then(() => {
+                setCurrentMFA(authenticationStore.preferredMfaSetting);
+            });
+            authenticationStore.getUserPoolMFAOptions();
+        }, []);
+
+        const onChange = (method: PreferMethod): void => {
+            authenticationStore.setPreferredMfaSetting(method);
         };
-        this.props.authenticationStore.setUserMfaPreference(
-            smsMfaSettings,
-            null
-        );
-    }
-    private onClearAll() {
-        this.setState({
-            currentMFA: "",
-        });
-        this.setModalVisible(false);
-        let totpMfaSettings = {
-            PreferredMfa: false,
-            Enabled: false,
+
+        const handleSelectTOTP = () => {
+            authenticationStore.associateSoftwareToken();
+            navigation.navigate("Auth/Login");
         };
-        let smsMfaSettings = {
-            PreferredMfa: false,
-            Enabled: false,
+
+        const handleSelectSMS = () => {
+            const smsMfaSettings = {
+                PreferredMfa: true,
+                Enabled: true,
+            };
+            authenticationStore.setUserMfaPreference(smsMfaSettings, null);
         };
-        this.props.authenticationStore.setUserMfaPreference(
-            smsMfaSettings,
-            totpMfaSettings
-        );
-    }
-    render() {
-        let { preferredMfaSetting, isFetching, userPoolMFAOption } =
-            this.props.authenticationStore;
+
+        const onClearAll = () => {
+            setCurrentMFA("");
+            setModalVisible(false);
+            const totpMfaSettings = {
+                PreferredMfa: false,
+                Enabled: false,
+            };
+            const smsMfaSettings = {
+                PreferredMfa: false,
+                Enabled: false,
+            };
+            authenticationStore.setUserMfaPreference(
+                smsMfaSettings,
+                totpMfaSettings
+            );
+        };
+
+        const onSubmit = (): void => {
+            if (authenticationStore.preferredMfaSetting === PreferMethod.None) {
+                setModalVisible(true);
+            } else if (
+                authenticationStore.preferredMfaSetting === PreferMethod.TOTP
+            ) {
+                handleSelectTOTP();
+            } else if (
+                authenticationStore.preferredMfaSetting === PreferMethod.SMS
+            ) {
+                handleSelectSMS();
+            }
+        };
+
+        const { preferredMfaSetting, isFetching, userPoolMFAOption } =
+            authenticationStore;
+
         // Determine which MFA options are available based on userPoolMFAOption
-        let mfaOptionList: MfaTypeList[] = [];
+        const mfaOptionList: MfaTypeList[] = [];
         if (userPoolMFAOption.methods.includes("SOFTWARE_TOKEN")) {
             mfaOptionList.push({
                 label: "auth.mfa.totp",
@@ -159,25 +121,26 @@ export class ProfileMfaSettingsScreen extends Component<Props, State> {
                 value: "SMS",
             });
         }
+
         return (
             <View style={styles.container}>
                 <View>
                     <Spinner isVisible={isFetching} />
                     <Text style={styles.languageLabel}>
-                        {I18n.t("auth.mfa.settings_label")}
+                        {t("auth.mfa.settings_label")}
                     </Text>
                     <Select
                         style={styles.languageSelect}
                         triggerTextStyle={styles.languageTriggerText}
                         selectedValue={preferredMfaSetting}
-                        onValueChange={(value) => {
-                            this.onChange(value);
-                        }}
+                        onValueChange={(value) =>
+                            onChange(value as PreferMethod)
+                        }
                     >
                         {mfaOptionList.map((option, index) => (
                             <Select.Item
                                 key={index}
-                                label={I18n.t(option.label)}
+                                label={t(option.label)}
                                 value={option.value}
                             />
                         ))}
@@ -189,20 +152,20 @@ export class ProfileMfaSettingsScreen extends Component<Props, State> {
                     <CathyRaisedButton
                         style={styles.loginButton}
                         text="Submit"
-                        onPress={this.onSubmit}
-                        disabled={preferredMfaSetting == this.state.currentMFA}
+                        onPress={onSubmit}
+                        disabled={preferredMfaSetting === currentMFA}
                     />
                 </View>
 
                 <NoneMfaConfirmModal
-                    setModalVisible={this.setModalVisible}
-                    onClearAll={this.onClearAll}
-                    modalVisible={this.state.modalVisible}
-                ></NoneMfaConfirmModal>
+                    setModalVisible={setModalVisible}
+                    onClearAll={onClearAll}
+                    modalVisible={modalVisible}
+                />
             </View>
         );
-    }
-}
+    })
+);
 
 const styles = StyleSheet.create({
     container: {
@@ -279,3 +242,5 @@ const styles = StyleSheet.create({
         margin: 10,
     },
 });
+
+export { ProfileMfaSettingsScreen };

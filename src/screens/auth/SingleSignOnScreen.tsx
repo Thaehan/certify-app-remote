@@ -8,37 +8,27 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, { PureComponent } from 'react';
-import {
-    View,
-    Image,
-    Alert,
-    Linking,
-    StyleSheet,
-} from 'react-native';
-import { inject } from 'mobx-react';
-import { NavigationScreenProp, NavigationRoute } from 'react-navigation';
-import LinearGradient from 'react-native-linear-gradient';
-import { I18n } from '../../utils/I18n';
-import { Colors } from '../../utils/Colors';
-import { AllStores } from '../../stores/RootStore';
-import { CognitoSessionStore } from '../../stores/CognitoSessionStore';
-import { CallbackStore } from '../../stores/CallbackStore';
-import { Spinner } from '../../shared-components/Spinner';
-import { SafeAreaFix, TextFix } from '../../shared-components/cathy/IOSFix';
+import { inject, observer } from "mobx-react";
+import React, { FC, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, Image, Linking, StyleSheet, View } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
+import { Spinner } from "../../shared-components/Spinner";
 import {
     CathyRaisedButton,
     CathyTextButton,
-} from '../../shared-components/cathy/CathyButton';
-import { cathyViews } from '../../shared-components/cathy/CommonViews';
+} from "../../shared-components/cathy/CathyButton";
+import { cathyViews } from "../../shared-components/cathy/CommonViews";
+import { SafeAreaFix, TextFix } from "../../shared-components/cathy/IOSFix";
+import { CallbackStore } from "../../stores/CallbackStore";
+import { CognitoSessionStore } from "../../stores/CognitoSessionStore";
+import { AllStores } from "../../stores/RootStore";
+import { Colors } from "../../utils/Colors";
 
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     sessionStore: CognitoSessionStore;
     callbackStore: CallbackStore;
-}
-interface State {
-    isFetching: boolean;
 }
 
 /**
@@ -46,105 +36,107 @@ interface State {
  *
  * @author Lingqi
  */
-@inject(({ rootStore }: AllStores) => ({
+const SingleSignOnScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
     sessionStore: rootStore.cognitoSessionStore,
-    callbackStore: rootStore.callbackStore
-}))
-export class SingleSignOnScreen extends PureComponent<Props, State> {
+    callbackStore: rootStore.callbackStore,
+}))(
+    observer(({ navigation, sessionStore, callbackStore }) => {
+        const [isFetching, setIsFetching] = useState(false);
+        const { t } = useTranslation();
 
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            isFetching: false
+        const showAlert = (title: string, message: string): void => {
+            setTimeout(() => {
+                Alert.alert(
+                    title,
+                    message,
+                    [{ text: t("alert.button.ok"), style: "cancel" }],
+                    { cancelable: false }
+                );
+            }, 100);
         };
-        this.onPressContinue = this.onPressContinue.bind(this);
-        this.onPressAnother = this.onPressAnother.bind(this);
-    }
 
-    private onPressContinue(): void {
-        const { callbackStore } = this.props;
-        this.setState({ isFetching: true });
-        callbackStore.getOutboundLink()
-            .then((redirectUrl) => {
-                this.setState({ isFetching: false });
-                this.openUrl(redirectUrl);
-            })
-            .catch((reason) => {
-                this.setState({ isFetching: false });
-                this.showAlert(I18n.t('alert.title.error'), reason);
-            });
-    }
+        const openUrl = (url: string): void => {
+            Linking.openURL(url)
+                .then(() => {
+                    callbackStore.clearCallback();
+                    navigation.navigate("Splash");
+                })
+                .catch(() => {
+                    showAlert(
+                        t("alert.title.error"),
+                        t("error.not_installed", {
+                            appName: callbackStore.appName,
+                        })
+                    );
+                });
+        };
 
-    private onPressAnother(): void {
-        const { navigation, sessionStore } = this.props;
-        sessionStore.signOut();
-        navigation.navigate('Auth/Login');
-    }
+        const onPressContinue = (): void => {
+            setIsFetching(true);
+            callbackStore
+                .getOutboundLink()
+                .then((redirectUrl) => {
+                    setIsFetching(false);
+                    openUrl(redirectUrl);
+                })
+                .catch((reason) => {
+                    setIsFetching(false);
+                    showAlert(t("alert.title.error"), reason);
+                });
+        };
 
-    private openUrl(url: string): void {
-        const { navigation, callbackStore } = this.props;
-        Linking.openURL(url).then(() => {
-            callbackStore.clearCallback();
-            navigation.navigate('Splash');
-        }).catch(() => {
-            this.showAlert(
-                I18n.t('alert.title.error'),
-                I18n.t('error.not_installed', { appName: callbackStore.appName })
-            );
-        });
-    }
+        const onPressAnother = (): void => {
+            sessionStore.signOut();
+            navigation.navigate("Auth/Login");
+        };
 
-    private showAlert(title: string, message: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                title,
-                message,
-                [{ text: I18n.t('alert.button.ok'), style: 'cancel' }],
-                { cancelable: false },
-            );
-        }, 100);
-    }
-
-    render() {
-        const { sessionStore, callbackStore } = this.props;
         return (
             <SafeAreaFix
                 statusBarColor={Colors.cathyBlueBg}
-                containerColor={'white'}>
+                containerColor={"white"}
+            >
                 <LinearGradient
                     style={styles.container}
-                    colors={[Colors.cathyBlueBg, 'white']}>
-                    <Spinner
-                        isVisible={this.state.isFetching} />
+                    colors={[Colors.cathyBlueBg, "white"]}
+                >
+                    <Spinner isVisible={isFetching} />
                     <View style={styles.topSpace} />
                     <Image
                         style={styles.successImage}
-                        source={require('../../assets/image/auth/success.png')}
-                        resizeMode={'contain'} />
+                        source={require("../../assets/image/auth/success.png")}
+                        resizeMode={"contain"}
+                    />
                     <View style={styles.middleSpace1} />
                     <TextFix style={cathyViews.title}>
-                        {I18n.t('auth.sso.title')}
+                        {t("auth.sso.title")}
                     </TextFix>
                     <TextFix style={[cathyViews.subtitle, styles.successInfo]}>
-                        {I18n.t('auth.sso.subtitle', { name: sessionStore.displayName() })}
+                        {t("auth.sso.subtitle", {
+                            name: sessionStore.displayName(),
+                        })}
                     </TextFix>
                     <View style={styles.middleSpace2} />
                     <CathyRaisedButton
-                        text={I18n.t('auth.sso.continue_button', { appName: callbackStore.appName })}
-                        onPress={this.onPressContinue} />
+                        text={t("auth.sso.continue_button", {
+                            appName: callbackStore.appName,
+                        })}
+                        onPress={onPressContinue}
+                    />
                     <View style={styles.middleSpace3} />
                     <CathyTextButton
-                        text={I18n.t('auth.sso.another_button')}
-                        onPress={this.onPressAnother} />
+                        text={t("auth.sso.another_button")}
+                        onPress={onPressAnother}
+                    />
                     <View style={styles.bottomSpace} />
                     <Image
                         style={cathyViews.bottomLogo}
-                        source={require('../../assets/image/logo.png')} />
+                        source={require("../../assets/image/logo.png")}
+                    />
                 </LinearGradient>
             </SafeAreaFix>
         );
-    }
-}
+    })
+);
 
 const styles = StyleSheet.create({
     container: {
@@ -154,7 +146,7 @@ const styles = StyleSheet.create({
         flex: 92,
     },
     successImage: {
-        alignSelf: 'center',
+        alignSelf: "center",
         width: 83,
         height: 102,
     },
@@ -174,3 +166,5 @@ const styles = StyleSheet.create({
         flex: 245,
     },
 });
+
+export { SingleSignOnScreen };

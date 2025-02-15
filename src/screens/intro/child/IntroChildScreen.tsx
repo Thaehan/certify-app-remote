@@ -1,18 +1,8 @@
-import React, {
-    PureComponent,
-    Fragment,
-    ReactElement,
-} from 'react';
-import {
-    View,
-    Text,
-    ImageProps,
-    StyleSheet,
-    Platform,
-} from 'react-native';
-import { I18n } from '../../../utils/I18n';
-import { Colors } from '../../../utils/Colors';
-import { CathyRaisedButton } from '../../../shared-components/cathy/CathyButton';
+import React, { PureComponent, Fragment, ReactElement } from "react";
+import { View, Text, ImageProps, StyleSheet, Platform } from "react-native";
+import I18n from "../../../utils/I18n";
+import { Colors } from "../../../utils/Colors";
+import { CathyRaisedButton } from "../../../shared-components/cathy/CathyButton";
 
 interface Props {
     title: string;
@@ -23,19 +13,16 @@ interface Props {
 }
 
 export class IntroChildScreen extends PureComponent<Props> {
-
     static defaultProps = {
         showLoginButton: false,
-        onPressLogin: () => { }
+        onPressLogin: () => {},
     };
 
     render() {
         return (
             <Fragment>
                 <View style={styles.topSpace} />
-                <Text
-                    style={styles.titleText}
-                    numberOfLines={2}>
+                <Text style={styles.titleText} numberOfLines={2}>
                     {this.props.title}
                 </Text>
                 <View style={styles.midSpace1} />
@@ -43,16 +30,15 @@ export class IntroChildScreen extends PureComponent<Props> {
                     {this.props.iconImage}
                 </View>
                 <View style={styles.midSpace2} />
-                <Text
-                    style={styles.infoText}
-                    numberOfLines={2}>
+                <Text style={styles.infoText} numberOfLines={2}>
                     {this.props.subtitle}
                 </Text>
                 <View style={styles.bottomSpace1} />
                 {this.props.showLoginButton ? (
                     <CathyRaisedButton
-                        text={I18n.t('intro.sign_button')}
-                        onPress={this.props.onPressLogin!} />
+                        text={I18n.t("intro.sign_button")}
+                        onPress={this.props.onPressLogin!}
+                    />
                 ) : (
                     <View style={styles.buttonSpace} />
                 )}
@@ -70,18 +56,18 @@ const styles = StyleSheet.create({
         height: 60,
         marginHorizontal: 24,
         fontSize: 24,
-        fontFamily: 'Roboto-Regular',
+        fontFamily: "Roboto-Regular",
         lineHeight: 30,
         color: Colors.cathyMajorText,
-        textAlign: 'center',
+        textAlign: "center",
     },
     midSpace1: {
         flex: 56,
     },
     imageContainer: {
         height: 140,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
     },
     midSpace2: {
         flex: 56,
@@ -89,10 +75,10 @@ const styles = StyleSheet.create({
     infoText: {
         height: 36,
         fontSize: 14,
-        fontFamily: 'Roboto-Regular',
+        fontFamily: "Roboto-Regular",
         lineHeight: 18,
         color: Colors.cathyOrange,
-        textAlign: 'center',
+        textAlign: "center",
     },
     bottomSpace1: {
         flex: 68,

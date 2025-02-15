@@ -1,167 +1,145 @@
-import React, { Component } from "react";
+import Clipboard from "@react-native-clipboard/clipboard";
+import { inject, observer } from "mobx-react";
+import React, { FC, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-    View,
+    Alert,
+    Dimensions,
+    Image,
+    Keyboard,
+    StyleSheet,
     Text,
     TextInput,
-    Dimensions,
-    StyleSheet,
-    Keyboard,
-    Image,
     TouchableOpacity,
-    Alert,
+    View,
 } from "react-native";
-import { inject, observer } from "mobx-react";
-import { AllStores } from "../../../stores/RootStore";
-import { AuthenticateStore } from "../../../stores/AuthenticateStore";
-import { Colors } from "../../../utils/Colors";
-
+import Toast from "react-native-toast-message";
 import {
     CathyRaisedButton,
     CathyTextButton,
 } from "../../../shared-components/cathy/CathyButton";
-import { UserPoolStore } from "../../../stores/UserPoolStore";
 import GenerateQRCodeForAuthenticator from "../../../shared-components/mfa-input/GenerateQRCodeForAuthenticator";
+import { MfaInputView } from "../../../shared-components/mfa-input/MfaInputView";
+import { AuthenticateStore } from "../../../stores/AuthenticateStore";
 import { CallbackStore } from "../../../stores/CallbackStore";
 import { CognitoSessionStore } from "../../../stores/CognitoSessionStore";
-import { MfaInputView } from "../../../shared-components/mfa-input/MfaInputView";
-import I18n from "i18n-js";
-import Clipboard from "@react-native-clipboard/clipboard";
-import Toast from "react-native-toast-message";
+import { AllStores } from "../../../stores/RootStore";
+import { UserPoolStore } from "../../../stores/UserPoolStore";
+import { Colors } from "../../../utils/Colors";
 
-interface State {
-    authenticatorCode: string;
-}
 interface Props {
     authenticateStore: AuthenticateStore;
     userPoolStore: UserPoolStore;
     callbackStore: CallbackStore;
     sessionStore: CognitoSessionStore;
 }
-@inject(({ rootStore }: AllStores) => ({
-    authenticateStore: rootStore.authenticateStore,
-    userPoolStore: rootStore.userPoolStore,
-    callbackStore: rootStore.callbackStore,
-    sessionStore: rootStore.cognitoSessionStore,
-}))
+
 /**
  * 'MFA' step of login flow
  *
  * @author NganNH
  */
-@observer
-class TOTPVerificationScreen extends Component<Props, State> {
-    private authenticatorCodeInput!: TextInput;
-    static defaultProps = {
-        userPoolStore: undefined,
-        authenticateStore: undefined,
-        callbackStore: undefined,
-        sessionStore: undefined,
-    };
-    private mfaInputView!: MfaInputView;
+const TOTPVerificationScreen: FC<Props> = inject(
+    ({ rootStore }: AllStores) => ({
+        authenticateStore: rootStore.authenticateStore,
+        userPoolStore: rootStore.userPoolStore,
+        callbackStore: rootStore.callbackStore,
+        sessionStore: rootStore.cognitoSessionStore,
+    })
+)(
+    observer(({ authenticateStore, callbackStore, sessionStore }) => {
+        const [authenticatorCode, setAuthenticatorCode] = useState("");
+        const mfaInputViewRef = useRef<MfaInputView>(null);
+        const authenticatorCodeInputRef = useRef<TextInput>(null);
+        const { t } = useTranslation();
 
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            authenticatorCode: "",
+        const showAlert = (title: string, message: string): void => {
+            setTimeout(() => {
+                Alert.alert(
+                    title,
+                    message,
+                    [{ text: t("alert.button.ok"), style: "cancel" }],
+                    { cancelable: false }
+                );
+            }, 100);
         };
-        this.onChangeCode = this.onChangeCode.bind(this);
-        this.handleBack = this.handleBack.bind(this);
-        this.onPressBackground = this.onPressBackground.bind(this);
-        this.onChangeAuthenticatorCode =
-            this.onChangeAuthenticatorCode.bind(this);
-    }
-    //**************************************************************
-    // Button Callbacks
-    //****************************************************************
-    private onPressBackground(): void {
-        Keyboard.dismiss();
-    }
-    handleVerifyTOTP = async () => {
-        const appId = this.props.callbackStore.appId;
-        try {
-            await this.props.authenticateStore.associateSecretCode(
-                this.state.authenticatorCode,
-                appId
-            );
-        } catch (error) {
-            this.showAlert(I18n.t("alert.title1.error"), error as string);
-            console.error("TOTP verification failed", error);
-            // Handle verification failure
-        }
-    };
 
-    handleBack = () => {
-        try {
-            this.props.authenticateStore.setLoginStep("SelectPreferMethod");
-        } catch (error) {
-            console.error("TOTP verification failed", JSON.stringify(error));
-            // Handle verification failure
-        }
-    };
-    //**************************************************************
-    // TextEdit Callbacks
-    //****************************************************************
+        const showToast = (
+            type: "success" | "error",
+            titleKey: string,
+            messageKey: string
+        ) => {
+            Toast.show({
+                type: type,
+                position: "bottom",
+                text1: t(titleKey),
+                text2: t(messageKey),
+                visibilityTime: 3000,
+                autoHide: true,
+            });
+        };
 
-    private onChangeAuthenticatorCode(text: string): void {
-        this.setState({ authenticatorCode: text });
-    }
-    private onChangeCode(code: string): void {
-        this.setState({ authenticatorCode: code });
-        if (code.length == 6) {
+        const copyToClipboard = (secretCode: string) => {
+            if (secretCode) {
+                Clipboard.setString(secretCode);
+                showToast(
+                    "success",
+                    "auth.totp_setup.toast.success.title",
+                    "auth.totp_setup.toast.success.message"
+                );
+            } else {
+                showToast(
+                    "error",
+                    "auth.totp_setup.toast.error.title",
+                    "auth.totp_setup.toast.error.message"
+                );
+            }
+        };
+
+        const onPressBackground = (): void => {
             Keyboard.dismiss();
-        }
-    }
-    private showAlert(title: string, message: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                title,
-                message,
-                [{ text: I18n.t("alert.button.ok"), style: "cancel" }],
-                { cancelable: false }
-            );
-        }, 100);
-    }
-    private showToast(
-        type: "success" | "error",
-        titleKey: string,
-        messageKey: string
-    ) {
-        Toast.show({
-            type: type,
-            position: "bottom",
-            text1: I18n.t(titleKey),
-            text2: I18n.t(messageKey),
-            visibilityTime: 3000,
-            autoHide: true,
-        });
-    }
+        };
 
-    private copyToClipboard(secretCode: string) {
-        if (secretCode) {
-            Clipboard.setString(secretCode);
-            this.showToast(
-                "success",
-                "auth.totp_setup.toast.success.title",
-                "auth.totp_setup.toast.success.message"
-            );
-        } else {
-            this.showToast(
-                "error",
-                "auth.totp_setup.toast.error.title",
-                "auth.totp_setup.toast.error.message"
-            );
-        }
-    }
-    render() {
+        const handleVerifyTOTP = async (): Promise<void> => {
+            const appId = callbackStore.appId;
+            try {
+                await authenticateStore.associateSecretCode(
+                    authenticatorCode,
+                    appId
+                );
+            } catch (error) {
+                showAlert(t("alert.title.error"), error as string);
+                console.error("TOTP verification failed", error);
+            }
+        };
+
+        const handleBack = (): void => {
+            try {
+                authenticateStore.setLoginStep("SelectPreferMethod");
+            } catch (error) {
+                console.error(
+                    "TOTP verification failed",
+                    JSON.stringify(error)
+                );
+            }
+        };
+
+        const onChangeCode = (code: string): void => {
+            setAuthenticatorCode(code);
+            if (code.length === 6) {
+                Keyboard.dismiss();
+            }
+        };
+
         return (
             <View style={{ flex: 1, justifyContent: "center" }}>
                 <View style={styles.topSpace} />
                 <View style={styles.container}>
                     <View style={styles.titleContainer}>
                         <Text style={styles.title}>
-                            {I18n.t("auth.totp_setup.title")}
+                            {t("auth.totp_setup.title")}
                             <Text style={styles.mfaText}>
-                                &nbsp; {I18n.t("auth.totp_setup.mfa")}
+                                &nbsp; {t("auth.totp_setup.mfa")}
                             </Text>
                         </Text>
                     </View>
@@ -176,46 +154,39 @@ class TOTPVerificationScreen extends Component<Props, State> {
                             </View>
                             <View>
                                 <Text style={styles.stepText}>
-                                    {I18n.t("auth.totp_setup.step_one")}{" "}
+                                    {t("auth.totp_setup.step_one")}
                                 </Text>
                                 <Text style={styles.qrCodeSub}>
-                                    {I18n.t("auth.totp_setup.step_one_guide")}
+                                    {t("auth.totp_setup.step_one_guide")}
                                 </Text>
                             </View>
                         </View>
                         <View style={styles.qrCodeContainer}>
                             <GenerateQRCodeForAuthenticator
                                 issuer={"Certify"}
-                                secretKey={
-                                    this.props.authenticateStore.totpSecret
-                                }
+                                secretKey={authenticateStore.totpSecret}
                                 accountName={
-                                    this.props.sessionStore.currentCognitoUser?.getUsername() ||
+                                    sessionStore.currentCognitoUser?.getUsername() ||
                                     ""
                                 }
                             />
                             <View>
                                 <View>
                                     <Text style={styles.stepText}>
-                                        {I18n.t("auth.totp_setup.step_two")}
+                                        {t("auth.totp_setup.step_two")}
                                     </Text>
                                     <Text style={styles.qrCodeSub}>
-                                        {I18n.t(
-                                            "auth.totp_setup.step_two_guide"
-                                        )}
+                                        {t("auth.totp_setup.step_two_guide")}
                                     </Text>
                                     <TouchableOpacity
-                                        onPress={() => {
-                                            this.copyToClipboard(
-                                                this.props.authenticateStore
-                                                    .totpSecret
-                                            );
-                                        }}
+                                        onPress={() =>
+                                            copyToClipboard(
+                                                authenticateStore.totpSecret
+                                            )
+                                        }
                                     >
                                         <Text style={styles.showSecretCode}>
-                                            {I18n.t(
-                                                "auth.totp_setup.copy_code"
-                                            )}
+                                            {t("auth.totp_setup.copy_code")}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -224,39 +195,35 @@ class TOTPVerificationScreen extends Component<Props, State> {
                         <View style={styles.codeInput}>
                             <View style={styles.CodeTitleContainer}>
                                 <Text style={styles.codeSub}>
-                                    {I18n.t("auth.totp_setup.enter_code")}
+                                    {t("auth.totp_setup.enter_code")}
                                 </Text>
                             </View>
                             <MfaInputView
-                                ref={(mfaInputView) =>
-                                    (this.mfaInputView = mfaInputView!)
-                                }
-                                onChangeCode={this.onChangeCode}
+                                ref={mfaInputViewRef}
+                                onChangeCode={onChangeCode}
                             />
                         </View>
                     </View>
 
                     <CathyRaisedButton
-                        disabled={this.state.authenticatorCode.length < 6}
+                        disabled={authenticatorCode.length < 6}
                         style={styles.loginButton}
-                        text={I18n.t("auth.submit")}
-                        onPress={this.handleVerifyTOTP}
+                        text={t("auth.submit")}
+                        onPress={handleVerifyTOTP}
                     />
                     <View style={styles.middleSpace1} />
 
                     <CathyTextButton
-                        text={I18n.t("auth.back")}
-                        onPress={this.handleBack}
+                        text={t("auth.back")}
+                        onPress={handleBack}
                     />
                 </View>
-
                 <View style={styles.bottomSpace} />
             </View>
         );
-    }
-}
+    })
+);
 
-export default TOTPVerificationScreen;
 const screenHeight = Dimensions.get("screen").height;
 const styles = StyleSheet.create({
     topSpace: {
@@ -344,3 +311,5 @@ const styles = StyleSheet.create({
         color: Colors.cathyMajorText,
     },
 });
+
+export default TOTPVerificationScreen;

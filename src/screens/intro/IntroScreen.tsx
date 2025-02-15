@@ -8,29 +8,23 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, { PureComponent } from 'react';
-import {
-    View,
-    Image,
-    StyleSheet,
-    NativeSyntheticEvent,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inject } from 'mobx-react';
-import { NavigationScreenProp, NavigationRoute } from 'react-navigation';
-import ViewPager, { ViewPagerOnPageSelectedEventData } from 'react-native-pager-view';
-import LinearGradient from 'react-native-linear-gradient';
-import { I18n } from '../../utils/I18n';
-import { Colors } from '../../utils/Colors';
-import { Keys } from '../../utils/Constants';
-import { AllStores } from '../../stores/RootStore';
-import { UserPoolStore } from '../../stores/UserPoolStore';
-import { IntroChildScreen } from './child/IntroChildScreen';
-import { PageIndicator } from './child/PageIndicator';
-import { SafeAreaFix } from '../../shared-components/cathy/IOSFix';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { inject, observer } from "mobx-react";
+import React, { FC, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { Image, NativeSyntheticEvent, StyleSheet, View } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
+import ViewPager from "react-native-pager-view";
+import { SafeAreaFix } from "../../shared-components/cathy/IOSFix";
+import { AllStores } from "../../stores/RootStore";
+import { UserPoolStore } from "../../stores/UserPoolStore";
+import { Colors } from "../../utils/Colors";
+import { Keys } from "../../utils/Constants";
+import { IntroChildScreen } from "./child/IntroChildScreen";
+import { PageIndicator } from "./child/PageIndicator";
 
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     userPoolStore: UserPoolStore;
 }
 
@@ -39,101 +33,103 @@ interface Props {
  *
  * @author Lingqi
  */
-@inject(({ rootStore }: AllStores) => ({
-    userPoolStore: rootStore.userPoolStore
-}))
-export class IntroScreen extends PureComponent<Props> {
+const IntroScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
+    userPoolStore: rootStore.userPoolStore,
+}))(
+    observer(({ navigation, userPoolStore }) => {
+        const viewPagerRef = useRef<ViewPager>(null);
+        const pageIndicatorRef = useRef<PageIndicator>(null);
 
-    private viewPager!: ViewPager;
-    private pageIndicator!: PageIndicator;
+        const { t } = useTranslation();
 
-    constructor(props: Props) {
-        super(props);
-        this.onPressLogin = this.onPressLogin.bind(this);
-        this.onPageSelected = this.onPageSelected.bind(this);
-        this.onIndicatorPress = this.onIndicatorPress.bind(this);
-    }
+        const onPressLogin = (): void => {
+            AsyncStorage.setItem(Keys.INTRO_DONE, JSON.stringify(true));
+            if (userPoolStore.isUserPoolInited()) {
+                navigation.navigate("Auth/Login");
+            } else {
+                navigation.navigate("Splash");
+            }
+        };
 
-    private onPressLogin(): void {
-        const { navigation, userPoolStore } = this.props;
-        AsyncStorage.setItem(Keys.INTRO_DONE, JSON.stringify(true));
-        if (userPoolStore.isUserPoolInited()) {
-            navigation.navigate('Auth/Login');
-        } else {
-            navigation.navigate('Splash');
-        }
-    }
+        const onPageSelected = (event: NativeSyntheticEvent<any>): void => {
+            const index = event.nativeEvent.position;
+            pageIndicatorRef.current?.setCurrentPage(index);
+        };
 
-    private onPageSelected(event: NativeSyntheticEvent<ViewPagerOnPageSelectedEventData>): void {
-        const index = event.nativeEvent.position;
-        this.pageIndicator.setCurrentPage(index);
-    }
+        const onIndicatorPress = (index: number): void => {
+            viewPagerRef.current?.setPage(index);
+        };
 
-    private onIndicatorPress(index: number): void {
-        this.viewPager.setPage(index);
-    }
-
-    render() {
         return (
             <SafeAreaFix
                 statusBarColor={Colors.cathyBlueBg}
-                containerColor={'white'}>
+                containerColor={"white"}
+            >
                 <LinearGradient
                     style={styles.container}
-                    colors={[Colors.cathyBlueBg, 'white']}>
+                    colors={[Colors.cathyBlueBg, "white"]}
+                >
                     <ViewPager
-                        ref={(viewPager) => this.viewPager = viewPager!}
+                        ref={viewPagerRef}
                         style={styles.container}
                         initialPage={0}
-                        onPageSelected={this.onPageSelected}>
+                        onPageSelected={onPageSelected}
+                    >
                         <View key={0}>
                             <IntroChildScreen
-                                title={I18n.t('intro.title1')}
-                                subtitle={I18n.t('intro.subtitle1')}
-                                iconImage={(
+                                title={t("intro.title1")}
+                                subtitle={t("intro.subtitle1")}
+                                iconImage={
                                     <Image
                                         style={styles.icon1}
-                                        source={require('../../assets/image/intro/intro1.png')}
-                                        resizeMode={'contain'} />
-                                )} />
+                                        source={require("../../assets/image/intro/intro1.png")}
+                                        resizeMode={"contain"}
+                                    />
+                                }
+                            />
                         </View>
                         <View key={1}>
                             <IntroChildScreen
-                                title={I18n.t('intro.title2')}
-                                subtitle={I18n.t('intro.subtitle2')}
-                                iconImage={(
+                                title={t("intro.title2")}
+                                subtitle={t("intro.subtitle2")}
+                                iconImage={
                                     <Image
                                         style={styles.icon2}
-                                        source={require('../../assets/image/intro/intro2.png')}
-                                        resizeMode={'contain'} />
-                                )} />
+                                        source={require("../../assets/image/intro/intro2.png")}
+                                        resizeMode={"contain"}
+                                    />
+                                }
+                            />
                         </View>
                         <View key={2}>
                             <IntroChildScreen
-                                title={I18n.t('intro.title3')}
-                                subtitle={I18n.t('intro.subtitle3')}
-                                iconImage={(
+                                title={t("intro.title3")}
+                                subtitle={t("intro.subtitle3")}
+                                iconImage={
                                     <Image
                                         style={styles.icon3}
-                                        source={require('../../assets/image/intro/intro3.png')}
-                                        resizeMode={'contain'} />
-                                )}
+                                        source={require("../../assets/image/intro/intro3.png")}
+                                        resizeMode={"contain"}
+                                    />
+                                }
                                 showLoginButton={true}
-                                onPressLogin={this.onPressLogin} />
+                                onPressLogin={onPressLogin}
+                            />
                         </View>
                     </ViewPager>
                     <PageIndicator
-                        ref={(pageIndicator) => this.pageIndicator = pageIndicator!}
+                        ref={pageIndicatorRef}
                         numberOfPages={3}
                         pageIndicatorTintColor={Colors.cathyMajorText}
                         currentPageIndicatorTintColor={Colors.cathyOrange}
                         indicatorRadius={5}
-                        onIndicatorPress={this.onIndicatorPress} />
+                        onIndicatorPress={onIndicatorPress}
+                    />
                 </LinearGradient>
             </SafeAreaFix>
         );
-    }
-}
+    })
+);
 
 const styles = StyleSheet.create({
     container: {
@@ -152,3 +148,5 @@ const styles = StyleSheet.create({
         height: 119,
     },
 });
+
+export { IntroScreen };

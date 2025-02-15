@@ -8,42 +8,37 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, { PureComponent } from 'react';
+import { inject, observer } from "mobx-react";
+import React, { FC, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
+    Alert,
+    Dimensions,
+    Image,
+    Keyboard,
     KeyboardAvoidingView,
+    StyleSheet,
+    TextInput,
     TouchableWithoutFeedback,
     View,
-    Image,
-    TextInput,
-    Keyboard,
-    Alert,
-    StyleSheet,
-    Dimensions
-} from 'react-native';
-import { inject } from 'mobx-react';
-import { NavigationScreenProp, NavigationRoute } from 'react-navigation';
-import LinearGradient from 'react-native-linear-gradient';
-import { I18n } from '../../utils/I18n';
-import { Colors } from '../../utils/Colors';
-import { ALL_ISO_CODES } from '../../utils/Constants';
-import { AllStores } from '../../stores/RootStore';
-import { UserPoolStore } from '../../stores/UserPoolStore';
-import { ForgotPasswordStore } from '../../stores/ForgotPasswordStore';
-import { Select } from '../../shared-components/Select';
-import { Spinner } from '../../shared-components/Spinner';
-import { SafeAreaFix, TextFix } from '../../shared-components/cathy/IOSFix';
-import { CathyTextField } from '../../shared-components/cathy/CathyTextField';
-import { CathyRaisedButton } from '../../shared-components/cathy/CathyButton';
-import { cathyViews } from '../../shared-components/cathy/CommonViews';
+} from "react-native";
+import LinearGradient from "react-native-linear-gradient";
+import { Select } from "../../shared-components/Select";
+import { Spinner } from "../../shared-components/Spinner";
+import { CathyRaisedButton } from "../../shared-components/cathy/CathyButton";
+import { CathyTextField } from "../../shared-components/cathy/CathyTextField";
+import { cathyViews } from "../../shared-components/cathy/CommonViews";
+import { SafeAreaFix, TextFix } from "../../shared-components/cathy/IOSFix";
+import { ForgotPasswordStore } from "../../stores/ForgotPasswordStore";
+import { AllStores } from "../../stores/RootStore";
+import { UserPoolStore } from "../../stores/UserPoolStore";
+import { Colors } from "../../utils/Colors";
+import { ALL_ISO_CODES } from "../../utils/Constants";
 
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     userPoolStore: UserPoolStore;
     forgotPasswordStore: ForgotPasswordStore;
-}
-interface State {
-    isoCode: string;
-    isFetching: boolean;
 }
 
 /**
@@ -51,217 +46,193 @@ interface State {
  *
  * @author Lingqi
  */
-@inject(({ rootStore }: AllStores) => ({
+const ActivateScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
     userPoolStore: rootStore.userPoolStore,
     forgotPasswordStore: rootStore.forgotPasswordStore,
-}))
-export class ActivateScreen extends PureComponent<Props, State> {
+}))(
+    observer(({ navigation, userPoolStore, forgotPasswordStore }) => {
+        const [isoCode, setIsoCode] = useState(
+            ALL_ISO_CODES[userPoolStore.accountId][0]
+        );
+        const [isFetching, setIsFetching] = useState(false);
+        const [username, setUsername] = useState("");
+        const { t } = useTranslation();
 
-    private username: string;
-
-    constructor(props: Props) {
-        super(props);
-        this.username = '';
-        this.state = {
-            isoCode: this.ALL_ISO_CODES[0],
-            isFetching: false,
+        const showAlert = (title: string, message: string): void => {
+            setTimeout(() => {
+                Alert.alert(
+                    title,
+                    message,
+                    [{ text: t("alert.button.ok"), style: "cancel" }],
+                    { cancelable: false }
+                );
+            }, 100);
         };
-        this.onChangeUsername = this.onChangeUsername.bind(this);
-        this.onSubmitUsername = this.onSubmitUsername.bind(this);
-        this.onPressActivate = this.onPressActivate.bind(this);
-        this.onPressBackground = this.onPressBackground.bind(this);
-        this.onPickerValueChange = this.onPickerValueChange.bind(this);
-    }
 
-    private get ALL_ISO_CODES(): string[] {
-        return ALL_ISO_CODES[this.props.userPoolStore.accountId];
-    }
+        const activateSuccess = (email: string): void => {
+            setTimeout(() => {
+                Alert.alert(
+                    t("alert.title.success"),
+                    t("alert.activate_success", { email }),
+                    [
+                        {
+                            text: t("alert.button.ok"),
+                            onPress: () => {
+                                navigation.navigate("Auth/Login");
+                            },
+                            style: "cancel",
+                        },
+                    ],
+                    { cancelable: false }
+                );
+            }, 100);
+        };
 
-    //**************************************************************
-    // TextEdit Callbacks
-    //****************************************************************
+        const onChangeUsername = (text: string): void => {
+            setUsername(text);
+        };
 
-    private onChangeUsername(text: string): void {
-        this.username = text;
-    }
+        const onPressActivate = (): void => {
+            Keyboard.dismiss();
+            if (!username) {
+                showAlert(t("alert.title.missing"), t("alert.missing_id"));
+                return;
+            }
+            setIsFetching(true);
+            const fullName = isoCode.trim() + username;
+            forgotPasswordStore
+                .activate(fullName)
+                .then((email) => {
+                    setIsFetching(false);
+                    activateSuccess(email);
+                })
+                .catch((reason) => {
+                    setIsFetching(false);
+                    showAlert(t("alert.title.error"), reason);
+                });
+        };
 
-    private onSubmitUsername(): void {
-        this.onPressActivate();
-    }
+        const onSubmitUsername = (): void => {
+            onPressActivate();
+        };
 
-    //**************************************************************
-    // Button Callbacks
-    //****************************************************************
+        const onPickerValueChange = (itemValue: string): void => {
+            setIsoCode(itemValue);
+        };
 
-    private onPressActivate(): void {
-        Keyboard.dismiss();
-        if (!this.username) {
-            this.showAlert(
-                I18n.t('alert.title.missing'),
-                I18n.t('alert.missing_id')
-            );
-            return;
-        }
-        this.setState({ isFetching: true });
-        const fullName = this.state.isoCode.trim() + this.username;
-        this.props.forgotPasswordStore.activate(fullName)
-            .then((email) => {
-                this.setState({ isFetching: false });
-                this.activateSuccess(email);
-            })
-            .catch((reason) => {
-                this.setState({ isFetching: false });
-                this.showAlert(I18n.t('alert.title.error'), reason);
-            });
-    }
-
-    private onPressBackground(): void {
-        Keyboard.dismiss();
-    }
-
-    //**************************************************************
-    // Picker Callbacks
-    //****************************************************************
-
-    private onPickerValueChange(itemValue: string, index: number): void {
-        this.setState({ isoCode: itemValue });
-    }
-
-    //**************************************************************
-    // Other Methods
-    //****************************************************************
-
-    private showAlert(title: string, message: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                title,
-                message,
-                [{ text: I18n.t('alert.button.ok'), style: 'cancel' }],
-                { cancelable: false },
-            );
-        }, 100);
-    }
-
-    private activateSuccess(email: string): void {
-        setTimeout(() => {
-            Alert.alert(
-                I18n.t('alert.title.success'),
-                I18n.t('alert.activate_success', { email }),
-                [{
-                    text: I18n.t('alert.button.ok'),
-                    onPress: () => {
-                        this.props.navigation.navigate('Auth/Login');
-                    },
-                    style: 'cancel',
-                }],
-                { cancelable: false },
-            );
-        }, 100);
-    }
-
-    //**************************************************************
-    // Render
-    //****************************************************************
-
-    render() {
-        const { isoCode } = this.state;
         return (
             <SafeAreaFix
                 statusBarColor={Colors.cathyBlueBg}
-                containerColor={'white'}>
-                <TouchableWithoutFeedback
-                    onPress={this.onPressBackground}>
+                containerColor={"white"}
+            >
+                <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
                     <KeyboardAvoidingView
                         style={styles.keyboardAvoidingContainer}
-                        behavior={'padding'}
-                        keyboardVerticalOffset={20}>
+                        behavior={"padding"}
+                        keyboardVerticalOffset={20}
+                    >
                         <LinearGradient
                             style={StyleSheet.absoluteFill}
-                            colors={[Colors.cathyBlueBg, 'white']} />
-                        <Spinner
-                            isVisible={this.state.isFetching} />
+                            colors={[Colors.cathyBlueBg, "white"]}
+                        />
+                        <Spinner isVisible={isFetching} />
                         <View style={styles.topSpace} />
                         <Image
                             style={styles.resetImage}
-                            source={require('../../assets/image/auth/email.png')}
-                            resizeMode={'contain'} />
+                            source={require("../../assets/image/auth/email.png")}
+                            resizeMode={"contain"}
+                        />
                         <View style={styles.middleSpace1} />
                         <TextFix style={cathyViews.title}>
-                            {I18n.t('auth.menu.activate')}
+                            {t("auth.menu.activate")}
                         </TextFix>
                         <TextFix style={[cathyViews.subtitle, styles.subtitle]}>
-                            {I18n.t('auth.forgot.initial_subtitle')}
+                            {t("auth.forgot.initial_subtitle")}
                         </TextFix>
                         <View style={styles.middleSpace2} />
                         <View style={cathyViews.usernameContainer}>
                             <Select
                                 style={cathyViews.userCodeSelect}
                                 triggerValue={isoCode}
-                                triggerTextStyle={cathyViews.userCodeTriggerText}
+                                triggerTextStyle={
+                                    cathyViews.userCodeTriggerText
+                                }
                                 selectedValue={isoCode}
-                                onValueChange={this.onPickerValueChange}>
-                                {this.ALL_ISO_CODES.map((code, index) => (
-                                    <Select.Item
-                                        key={index}
-                                        label={I18n.t('locale.' + code)}
-                                        value={code}
-                                        selectedColor={Colors.cathyBlue} />
-                                ))}
+                                onValueChange={onPickerValueChange}
+                            >
+                                {ALL_ISO_CODES[userPoolStore.accountId].map(
+                                    (code, index) => (
+                                        <Select.Item
+                                            key={index}
+                                            label={t("locale." + code)}
+                                            value={code}
+                                            selectedColor={Colors.cathyBlue}
+                                        />
+                                    )
+                                )}
                             </Select>
                             <CathyTextField
                                 style={cathyViews.usernameField}
-                                iconSource={require('../../assets/image/icon/identity.png')}>
+                                iconSource={require("../../assets/image/icon/identity.png")}
+                            >
                                 <TextInput
-                                    keyboardType={isoCode === 'SG' ? 'numeric' : 'default'}
-                                    placeholder={'STAFF ID'}
-                                    returnKeyType={'done'}
-                                    onSubmitEditing={this.onSubmitUsername}
-                                    onChangeText={this.onChangeUsername} />
+                                    keyboardType={
+                                        isoCode === "SG" ? "numeric" : "default"
+                                    }
+                                    placeholder={"STAFF ID"}
+                                    returnKeyType={"done"}
+                                    onSubmitEditing={onSubmitUsername}
+                                    onChangeText={onChangeUsername}
+                                />
                             </CathyTextField>
                         </View>
                         <View style={styles.middleSpace3} />
                         <CathyRaisedButton
-                            text={I18n.t('auth.activate.activate_button')}
-                            onPress={this.onPressActivate} />
+                            text={t("auth.activate.activate_button")}
+                            onPress={onPressActivate}
+                        />
                         <View style={styles.bottomSpace} />
                         <Image
                             style={cathyViews.bottomLogo}
-                            source={require('../../assets/image/logo.png')} />
+                            source={require("../../assets/image/logo.png")}
+                        />
                     </KeyboardAvoidingView>
                 </TouchableWithoutFeedback>
             </SafeAreaFix>
         );
-    }
-}
+    })
+);
 
-const screenHeight = Dimensions.get('screen').height;
+const screenHeight = Dimensions.get("screen").height;
 const styles = StyleSheet.create({
     keyboardAvoidingContainer: {
         flex: 1,
-        justifyContent: 'flex-end',
+        justifyContent: "flex-end",
     },
     topSpace: {
-        height: 100 * (screenHeight - 272) / 459,
+        height: (100 * (screenHeight - 272)) / 459,
     },
     resetImage: {
-        alignSelf: 'center',
+        alignSelf: "center",
         width: 88,
         height: 88,
     },
     middleSpace1: {
-        height: 28 * (screenHeight - 272) / 459,
-        minHeight: 16
+        height: (28 * (screenHeight - 272)) / 459,
+        minHeight: 16,
     },
     subtitle: {
         marginTop: 8,
     },
     middleSpace2: {
-        height: 64 * (screenHeight - 272) / 459,
+        height: (64 * (screenHeight - 272)) / 459,
     },
     middleSpace3: {
-        height: 48 * (screenHeight - 272) / 459,
+        height: (48 * (screenHeight - 272)) / 459,
     },
     bottomSpace: {
         flex: 1, // 219
     },
 });
+
+export { ActivateScreen };

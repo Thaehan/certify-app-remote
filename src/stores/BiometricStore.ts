@@ -8,20 +8,15 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import * as KeyChain from 'react-native-keychain';
-import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as KeyChain from "react-native-keychain";
+import { check, request, PERMISSIONS, RESULTS } from "react-native-permissions";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import {
-    observable,
-    action,
-    runInAction,
-    computed
-} from 'mobx';
+import { observable, action, runInAction, computed } from "mobx";
 import { Keys } from "../utils/Constants";
 import { Environment } from "../utils/Environment";
-import { I18n } from "../utils/I18n";
-import { RootStore } from './RootStore';
+import I18n from "../utils/I18n";
+import { RootStore } from "./RootStore";
 
 export const BIOMETRICS_RETRIEVE_ERROR = "BIOMETRICS_RETRIEVE_ERROR";
 
@@ -35,10 +30,10 @@ const biometry_permission_map = new Map([
     [KeyChain.BIOMETRY_TYPE.FACE_ID, PERMISSIONS.IOS.FACE_ID],
 ]);
 
-const biometry_type_map = new Map ([
-    [KeyChain.BIOMETRY_TYPE.FACE_ID, 'face_id'],
-    [KeyChain.BIOMETRY_TYPE.TOUCH_ID, 'touch_id'],
-    [KeyChain.BIOMETRY_TYPE.FINGERPRINT, 'fingerprint']
+const biometry_type_map = new Map([
+    [KeyChain.BIOMETRY_TYPE.FACE_ID, "face_id"],
+    [KeyChain.BIOMETRY_TYPE.TOUCH_ID, "touch_id"],
+    [KeyChain.BIOMETRY_TYPE.FINGERPRINT, "fingerprint"],
 ]);
 
 type Nullable<T> = T | null;
@@ -57,8 +52,8 @@ export class BiometricStore {
     constructor(rootStore: RootStore) {
         this.rootStore = rootStore;
         this.biometryType = null;
-        this.savedBioType = 'None';
-        this.bioLocalisationKey = 'None';
+        this.savedBioType = "None";
+        this.bioLocalisationKey = "None";
         this._isFirstBioSetup = false;
         this.bioSetupDoneBefore = false;
         this.isBioEnabledByUser = true;
@@ -76,14 +71,22 @@ export class BiometricStore {
     async init() {
         AsyncStorage.getItem(Keys.SAVED_BIO_TYPE).then((savedBioType) => {
             runInAction(() => {
-                this.savedBioType = savedBioType as string ?? 'None';
+                this.savedBioType = (savedBioType as string) ?? "None";
             });
         });
-        const isDoneBefore = JSON.parse(await AsyncStorage.getItem(Keys.FIRST_BIO_SETUP_DONE) as string) ?? false;
+        const isDoneBefore =
+            JSON.parse(
+                (await AsyncStorage.getItem(
+                    Keys.FIRST_BIO_SETUP_DONE
+                )) as string
+            ) ?? false;
         runInAction(() => {
             this.bioSetupDoneBefore = isDoneBefore;
         });
-        const isBioEnabledByUser: boolean = JSON.parse(await AsyncStorage.getItem(Keys.BIO_ENABLED) as string) ?? true;
+        const isBioEnabledByUser: boolean =
+            JSON.parse(
+                (await AsyncStorage.getItem(Keys.BIO_ENABLED)) as string
+            ) ?? true;
         runInAction(() => {
             this.isBioEnabledByUser = isBioEnabledByUser;
         });
@@ -101,7 +104,7 @@ export class BiometricStore {
 
     @action
     async getBiometryType() {
-        const bioType = await KeyChain.getSupportedBiometryType()
+        const bioType = await KeyChain.getSupportedBiometryType();
         this.biometryType = bioType;
         console.log("getBio: " + bioType);
         if (bioType !== null) {
@@ -109,21 +112,25 @@ export class BiometricStore {
                 const bioLocaleKey = biometry_type_map.get(bioType)!;
                 runInAction(() => {
                     this.bioLocalisationKey = bioLocaleKey;
-                    if (this.savedBioType == 'None' || this.savedBioType != bioLocaleKey) {
+                    if (
+                        this.savedBioType == "None" ||
+                        this.savedBioType != bioLocaleKey
+                    ) {
                         this.savedBioType = this.bioLocalisationKey;
-                        AsyncStorage.setItem(Keys.SAVED_BIO_TYPE, this.savedBioType);
+                        AsyncStorage.setItem(
+                            Keys.SAVED_BIO_TYPE,
+                            this.savedBioType
+                        );
                     }
                 });
-            }
-            else {
+            } else {
                 runInAction(() => {
-                    this.bioLocalisationKey = 'None';
+                    this.bioLocalisationKey = "None";
                 });
             }
-        }
-        else {
+        } else {
             runInAction(() => {
-                this.bioLocalisationKey = 'None';
+                this.bioLocalisationKey = "None";
             });
         }
     }
@@ -134,7 +141,7 @@ export class BiometricStore {
         AsyncStorage.setItem(Keys.FIRST_BIO_SETUP_DONE, JSON.stringify(false));
         this._isFirstBioSetup = false;
         runInAction(() => {
-           this.bioSetupDoneBefore = false;
+            this.bioSetupDoneBefore = false;
         });
     }
 
@@ -151,7 +158,7 @@ export class BiometricStore {
             this.resetBiometrics();
         }
         runInAction(() => {
-           this.isBioEnabledByUser = isEnable;
+            this.isBioEnabledByUser = isEnable;
         });
     }
 
@@ -164,7 +171,7 @@ export class BiometricStore {
             let isPermissionGranted: boolean = false;
             let isBiometricSupported: boolean = true;
 
-            if(this.checkPermissionNeeded()) {
+            if (this.checkPermissionNeeded()) {
                 const permission = await this.checkPermission();
                 switch (permission) {
                     case RESULTS.DENIED:
@@ -175,7 +182,9 @@ export class BiometricStore {
                                 isPermissionGranted = true;
                                 break;
                             case RESULTS.BLOCKED:
-                                console.log("The permission is denied and not requestable anymore");
+                                console.log(
+                                    "The permission is denied and not requestable anymore"
+                                );
                                 break;
                         }
                         break;
@@ -183,22 +192,27 @@ export class BiometricStore {
                         isPermissionGranted = true;
                         break;
                     case RESULTS.BLOCKED:
-                        console.log('The permission is denied and not requestable anymore');
+                        console.log(
+                            "The permission is denied and not requestable anymore"
+                        );
                         break;
                     default:
-                        console.log("Other permission types encountered: " + permission);
+                        console.log(
+                            "Other permission types encountered: " + permission
+                        );
                 }
-            }
-            else {
-                if (this.biometryType == KeyChain.BIOMETRY_TYPE.FACE ||
-                    this.biometryType == KeyChain.BIOMETRY_TYPE.IRIS) {
+            } else {
+                if (
+                    this.biometryType == KeyChain.BIOMETRY_TYPE.FACE ||
+                    this.biometryType == KeyChain.BIOMETRY_TYPE.IRIS
+                ) {
                     isBiometricSupported = false;
                 }
                 isPermissionGranted = true;
             }
             if (isBiometricSupported && isPermissionGranted) {
                 return new Promise((resolve, reject) => {
-                    this.addCredentials(resolve, reject, username, password)
+                    this.addCredentials(resolve, reject, username, password);
                 });
             }
         }
@@ -211,44 +225,57 @@ export class BiometricStore {
         resolve: (isAdded: boolean) => void,
         reject: (reason: string) => void,
         username: string,
-        password: string) {
-
+        password: string
+    ) {
         const isFirstBioSetupDone = this.bioSetupDoneBefore;
-        KeyChain.setInternetCredentials(Environment.biometricStoreId, username, password,
+        KeyChain.setInternetCredentials(
+            Environment.biometricStoreId,
+            username,
+            password,
             {
                 accessControl: KeyChain.ACCESS_CONTROL.BIOMETRY_ANY,
-                accessible: KeyChain.ACCESSIBLE.WHEN_UNLOCKED
-            }).then(() => {
-            if (!isFirstBioSetupDone) {
-                this._isFirstBioSetup = true;
-                AsyncStorage.setItem(Keys.FIRST_BIO_SETUP_DONE, JSON.stringify(true));
+                accessible: KeyChain.ACCESSIBLE.WHEN_UNLOCKED,
+            }
+        )
+            .then(() => {
+                if (!isFirstBioSetupDone) {
+                    this._isFirstBioSetup = true;
+                    AsyncStorage.setItem(
+                        Keys.FIRST_BIO_SETUP_DONE,
+                        JSON.stringify(true)
+                    );
+                    runInAction(() => {
+                        this.bioSetupDoneBefore = true;
+                    });
+                } else {
+                    this._isFirstBioSetup = false;
+                }
                 runInAction(() => {
-                    this.bioSetupDoneBefore = true;
+                    this.isLockedOut = false;
                 });
-            }
-            else {
-                this._isFirstBioSetup = false;
-            }
-            runInAction(() => {
-                this.isLockedOut = false;
-            });
-            resolve(true);
-        }).catch((reason) => {
-                console.log('BioStore addCredentials error: ' + reason);
+                resolve(true);
+            })
+            .catch((reason) => {
+                console.log("BioStore addCredentials error: " + reason);
                 reject(reason);
-        });
+            });
     }
 
     @action
     retrieveCredentials(): Promise<boolean | KeyChain.UserCredentials> {
         return new Promise((resolve, reject) => {
-            KeyChain.getInternetCredentials(Environment.biometricStoreId,
-                { authenticationPrompt: { title: I18n.t('auth.biometrics.auth_prompt')}})
+            KeyChain.getInternetCredentials(Environment.biometricStoreId, {
+                authenticationPrompt: {
+                    title: I18n.t("auth.biometrics.auth_prompt"),
+                },
+            })
                 .then((userCred: boolean | KeyChain.UserCredentials) => {
                     resolve(userCred);
                 })
                 .catch((reason: string) => {
-                    console.log('BioStore retrieveCredentials error: ' + reason);
+                    console.log(
+                        "BioStore retrieveCredentials error: " + reason
+                    );
                     runInAction(() => {
                         this.isLockedOut = true;
                     });
@@ -258,7 +285,7 @@ export class BiometricStore {
     }
 
     @action
-    async isBiometricEnabledSystem(){
+    async isBiometricEnabledSystem() {
         if (this.biometryType == null) {
             runInAction(() => {
                 this.isBioSystemReady = false;
@@ -272,37 +299,49 @@ export class BiometricStore {
             if (result == RESULTS.GRANTED) {
                 isBioPermGranted = true;
             }
-        }
-        else {
+        } else {
             isBioPermGranted = true;
         }
         runInAction(() => {
-           this.isBioSystemReady = isBioPermGranted;
+            this.isBioSystemReady = isBioPermGranted;
         });
     }
 
     async checkPermission(): Promise<string> {
-        if (this.biometryType !== null && biometry_permission_map.has(this.biometryType)) {
-            const permissionString = biometry_permission_map.get(this.biometryType);
+        if (
+            this.biometryType !== null &&
+            biometry_permission_map.has(this.biometryType)
+        ) {
+            const permissionString = biometry_permission_map.get(
+                this.biometryType
+            );
             if (permissionString !== undefined) {
                 return await check(permissionString);
             }
         }
-        return '';
+        return "";
     }
 
     async requestPermission(): Promise<string> {
-        if (this.biometryType !== null && biometry_permission_map.has(this.biometryType)) {
-            const permissionString = biometry_permission_map.get(this.biometryType);
+        if (
+            this.biometryType !== null &&
+            biometry_permission_map.has(this.biometryType)
+        ) {
+            const permissionString = biometry_permission_map.get(
+                this.biometryType
+            );
             if (permissionString !== undefined) {
                 return await request(permissionString);
             }
         }
-        return '';
+        return "";
     }
 
     checkPermissionNeeded(): boolean {
-        if (this.biometryType !== null && biometry_permission_map.has(this.biometryType)) {
+        if (
+            this.biometryType !== null &&
+            biometry_permission_map.has(this.biometryType)
+        ) {
             return true;
         }
         return false;

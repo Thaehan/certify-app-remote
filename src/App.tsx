@@ -8,37 +8,29 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, {
-    Component,
-    Fragment
-} from 'react';
-import {
-    Linking,
-    StatusBar,
-    Platform,
-    AppState,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inject, observer } from 'mobx-react';
-import { NavigationContainerComponent } from 'react-navigation';
-import * as RNLocalize from 'react-native-localize';
-import URI from 'urijs';
-import { AppSwitch } from './navigators/AppSwitch';
-import { NavigationService } from './navigators/NavigationService';
-import { I18n } from './utils/I18n';
-import { Colors } from './utils/Colors';
-import { Keys } from './utils/Constants';
-import { RootStore, AllStores } from './stores/RootStore';
-import { UserPoolStore } from './stores/UserPoolStore';
-import { CognitoSessionStore } from './stores/CognitoSessionStore';
-import { CallbackStore } from './stores/CallbackStore';
-import { MenuProvider } from 'react-native-popup-menu';
+import React, { useEffect, useRef, useState } from "react";
+import { Linking, StatusBar, Platform, AppState } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { inject, observer } from "mobx-react";
+import * as RNLocalize from "react-native-localize";
+//@ts-expect-error
+import URI from "urijs";
+import { AppSwitch } from "./navigators/AppSwitch";
+import { NavigationService } from "./navigators/NavigationService";
+import { Colors } from "./utils/Colors";
+import { Keys } from "./utils/Constants";
+import { RootStore, AllStores } from "./stores/RootStore";
+import { UserPoolStore } from "./stores/UserPoolStore";
+import { CognitoSessionStore } from "./stores/CognitoSessionStore";
+import { CallbackStore } from "./stores/CallbackStore";
+import { MenuProvider } from "react-native-popup-menu";
 import { BiometricStore } from "./stores/BiometricStore";
-import { SafeAreaProvider } from 'react-native-safe-area-view';
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import "react-native-gesture-handler";
+import Toast from "react-native-toast-message";
+import "./utils/I18n";
+import { getStoredLanguage } from "./utils/I18n";
 
-
-import 'react-native-gesture-handler';
-import Toast from 'react-native-toast-message';
 interface Props {
     rootStore: RootStore;
     userPoolStore: UserPoolStore;
@@ -47,174 +39,164 @@ interface Props {
     biometricStore: BiometricStore;
 }
 
-interface State {
-    appState: string;
-}
-
-/**
- * Root Component of the application
- *
- * @author Lingqi
- */
-@inject(({ rootStore }: AllStores) => ({
+const App: React.FC<Props> = inject(({ rootStore }: AllStores) => ({
     rootStore,
     userPoolStore: rootStore.userPoolStore,
     sessionStore: rootStore.cognitoSessionStore,
     callbackStore: rootStore.callbackStore,
     biometricStore: rootStore.biometricStore,
-}))
-@observer
-export class App extends Component<Props, State> {
-    private languageCalled: boolean;
-    urlListener: any;
+}))(
+    observer((props) => {
+        const [appState, setAppState] = useState(AppState.currentState);
+        const languageCalledRef = useRef(false);
+        const urlListener = useRef<any>(null);
 
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            appState: AppState.currentState
-        };
-        this.languageCalled = false;
-        this.handleInboundLink = this.handleInboundLink.bind(this);
-        this.handleLanguageChange = this.handleLanguageChange.bind(this);
-        this.handleAppStateChange = this.handleAppStateChange.bind(this);
-    }
-
-    //**************************************************************
-    // App Lifecycle
-    //****************************************************************
-
-    componentDidMount() {
-        AppState.addEventListener('change', this.handleAppStateChange);
-        this.urlListener = Linking.addEventListener('url', this.handleInboundLink);
-        Linking.getInitialURL().then((url) => {
-            if (url) {
-                this.handleInboundLink({url});
+        const handleAppStateChange = (nextAppState: string) => {
+            if (
+                appState.match(/inactive|background/) &&
+                nextAppState === "active"
+            ) {
+                console.log("App has come to the foreground!");
+                props.biometricStore.refreshBiometricState();
             }
-        });
-        RNLocalize.addEventListener('change', this.handleLanguageChange);
-        // iOS need to call manually. Android depends
-        setTimeout(() => {
-            this.handleLanguageChange();
-        }, 10);
-    }
+            setAppState(nextAppState as any);
+        };
 
-    componentWillUnmount() {
-        // AppState.remove();
-        this.urlListener.remove();
-        // RNLocalize.remove();
-        
-    }
-
-    //**************************************************************
-    // handle App event
-    //****************************************************************
-
-    private handleAppStateChange(nextAppState: string) {
-        if (this.state.appState.match(/inactive|background/) &&
-            nextAppState === "active") {
-            console.log("App has come to the foreground!");
-            const { biometricStore } =  this.props;
-            biometricStore.refreshBiometricState();
-        }
-        this.setState({
-            appState: nextAppState
-        });
-    }
-
-    private handleInboundLink(event: {url: string}): void {
-        const { userPoolStore, sessionStore, callbackStore } = this.props;
-        NavigationService.navigate('Splash');
-        const uri = new URI(event.url);
-        const queryMap = uri.query(true) as { [key: string]: string };
-        const data = queryMap['d'];
-        const sign = queryMap['s'];
-        if (data && sign) {
-            callbackStore.handleInboundLink(data, sign).then((query) => {
-                const userPoolId = query['ui'];
-                const clientId = query['ci'];
-                const accountId = query['ac'];
-                userPoolStore.initUserPool(userPoolId, clientId, accountId);
-                if (callbackStore.selectedApp) {
-                    sessionStore.getCachedSession()
-                        .then((session) => {
-                            callbackStore.getOutboundLink().then((redirectUrl) => {
-                                Linking.openURL(redirectUrl).then(() => {
-                                    callbackStore.clearCallback();
-                                    NavigationService.navigate('Main');
-                                });
-                            });
-                        })
-                        .catch((reason) => {
-                            callbackStore.clearCallback();
-                        });
-                } else {
-                    AsyncStorage.getItem(Keys.INTRO_DONE).then((isDone) => {
-                        if (JSON.parse(isDone as string)) {
-                            sessionStore.getCachedSession()
-                                .then((session) => {                                    
-                                    NavigationService.navigate('Auth/SSO');
+        const handleInboundLink = (event: { url: string }): void => {
+            const { userPoolStore, sessionStore, callbackStore } = props;
+            NavigationService.navigate("Splash");
+            const uri = new URI(event.url);
+            const queryMap = uri.query(true) as { [key: string]: string };
+            const data = queryMap["d"];
+            const sign = queryMap["s"];
+            if (data && sign) {
+                callbackStore
+                    .handleInboundLink(data, sign)
+                    .then((query) => {
+                        const userPoolId = query["ui"];
+                        const clientId = query["ci"];
+                        const accountId = query["ac"];
+                        userPoolStore.initUserPool(
+                            userPoolId,
+                            clientId,
+                            accountId
+                        );
+                        if (callbackStore.selectedApp) {
+                            sessionStore
+                                .getCachedSession()
+                                .then(() => {
+                                    callbackStore
+                                        .getOutboundLink()
+                                        .then((redirectUrl) => {
+                                            Linking.openURL(redirectUrl).then(
+                                                () => {
+                                                    callbackStore.clearCallback();
+                                                    NavigationService.navigate(
+                                                        "Main"
+                                                    );
+                                                }
+                                            );
+                                        });
                                 })
-                                .catch((reason) => {
-                                    NavigationService.navigate('Auth/Login');
+                                .catch(() => {
+                                    callbackStore.clearCallback();
                                 });
                         } else {
-                            NavigationService.navigate('Intro');
+                            AsyncStorage.getItem(Keys.INTRO_DONE).then(
+                                (isDone) => {
+                                    if (JSON.parse(isDone as string)) {
+                                        sessionStore
+                                            .getCachedSession()
+                                            .then(() => {
+                                                NavigationService.navigate(
+                                                    "Auth"
+                                                );
+                                            })
+                                            .catch(() => {
+                                                NavigationService.navigate(
+                                                    "Auth"
+                                                );
+                                            });
+                                    } else {
+                                        NavigationService.navigate("Intro");
+                                    }
+                                }
+                            );
                         }
+                    })
+                    .catch((reason) => {
+                        console.log({ reason });
                     });
-                }
-            }).catch((reason) => {
-                console.log(reason);
-            });
-        }
-    }
-
-    private handleLanguageChange(): void {
-        const { rootStore } = this.props;
-        if (this.languageCalled) {
-            return;
-        }
-        this.languageCalled = true;
-        AsyncStorage.getItem(Keys.SYSTEM_LANGUAGE).then((savedSystemLang) => {
-            const locales = RNLocalize.getLocales();
-            const systemLang = I18n.matchedSystemLang(locales);
-            if (systemLang !== savedSystemLang) {
-                AsyncStorage.multiSet([
-                    [Keys.SYSTEM_LANGUAGE, systemLang],
-                    [Keys.LANGUAGE, systemLang],
-                ]);
-                rootStore.useLang(systemLang);
-            } else {
-                AsyncStorage.getItem(Keys.LANGUAGE).then((userLang) => {
-                    rootStore.useLang(userLang || 'en');
-                });
             }
-        });
-    }
+        };
 
-    //**************************************************************
-    // Render
-    //****************************************************************
+        const handleLanguageChange = (): void => {
+            const { rootStore } = props;
+            if (languageCalledRef.current) {
+                return;
+            }
+            languageCalledRef.current = true;
+            AsyncStorage.getItem(Keys.SYSTEM_LANGUAGE).then(
+                (savedSystemLang) => {
+                    const locales = RNLocalize.getLocales();
+                    const systemLang = getStoredLanguage();
+                    if (systemLang !== savedSystemLang) {
+                        AsyncStorage.multiSet([
+                            [Keys.SYSTEM_LANGUAGE, systemLang],
+                            [Keys.LANGUAGE, systemLang],
+                        ]);
+                        rootStore.useLang(systemLang);
+                    } else {
+                        AsyncStorage.getItem(Keys.LANGUAGE).then((userLang) => {
+                            rootStore.useLang(userLang || "en");
+                        });
+                    }
+                }
+            );
+        };
 
-    render() {
-        const { rootStore } = this.props;
-        const statusBarFix = Platform.OS === 'android' && Platform.Version < 23;
+        useEffect(() => {
+            AppState.addEventListener("change", handleAppStateChange);
+            urlListener.current = Linking.addEventListener(
+                "url",
+                handleInboundLink
+            );
+
+            Linking.getInitialURL().then((url) => {
+                if (url) {
+                    handleInboundLink({ url });
+                }
+            });
+
+            setTimeout(() => {
+                handleLanguageChange();
+            }, 10);
+
+            return () => {
+                urlListener.current?.remove();
+            };
+        }, []);
+
+        const statusBarFix = Platform.OS === "android" && Platform.Version < 23;
+
         return (
-          <MenuProvider skipInstanceCheck={true}>
-                <SafeAreaProvider><Fragment>
-                <StatusBar
-                    translucent={Platform.OS === 'ios'}
-                    backgroundColor={statusBarFix ? '#8BA4B2' : Colors.cathyBlueBg}
-                    barStyle={'dark-content'} />
-                <AppSwitch
-                    ref={(navigatorRef: NavigationContainerComponent) => {
-                        NavigationService.setTopLevelNavigator(navigatorRef);
-                    }}
-                    screenProps={{ currentLang: rootStore.currentLang }}
-                    enableURLHandling={false} />
-            </Fragment>
-            <Toast/>
-           </SafeAreaProvider>
-        </MenuProvider>
+            <MenuProvider skipInstanceCheck={true}>
+                <SafeAreaProvider>
+                    <>
+                        <StatusBar
+                            translucent={Platform.OS === "ios"}
+                            backgroundColor={
+                                statusBarFix ? "#8BA4B2" : Colors.cathyBlueBg
+                            }
+                            barStyle={"dark-content"}
+                        />
+                        <AppSwitch />
+                    </>
+                    <Toast />
+                </SafeAreaProvider>
+            </MenuProvider>
         );
-    }
-}
+    })
+);
+
+export { App };

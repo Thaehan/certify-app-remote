@@ -20,7 +20,7 @@ import {
 } from "amazon-cognito-identity-js";
 import { AppVersion } from "../nativeUtils/NativeModules";
 import { HttpClient } from "../utils/HttpClient";
-import { I18n } from "../utils/I18n";
+import I18n, { toErrorMessage } from "../utils/I18n";
 import { Environment } from "../utils/Environment";
 import { RootStore } from "./RootStore";
 import { VerifyDetail } from "./ForgotPasswordStore";
@@ -118,7 +118,7 @@ export class AuthenticateStore {
                             .then()
                             .catch((reason) => {
                                 console.log("Authenticate error: " + reason);
-                                reject(I18n.toErrorMessage(reason.message));
+                                reject(toErrorMessage(reason.message));
                             });
                     }
                 })
@@ -165,7 +165,7 @@ export class AuthenticateStore {
                 onFailure: (err: Error) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
                 newPasswordRequired: () => {
@@ -258,7 +258,7 @@ export class AuthenticateStore {
                 onFailure: (err: Error) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
                 mfaRequired: (challengeName, challengeParameters) => {
@@ -282,7 +282,7 @@ export class AuthenticateStore {
             return HttpClient.get<MFAOptionResponse>(url, {
                 withCredentials: true,
             })
-                .then((response) => {         
+                .then((response) => {
                     runInAction(() => {
                         this.isFetching = false;
                         this.userPoolMFAOption = response;
@@ -291,7 +291,7 @@ export class AuthenticateStore {
                 })
                 .catch((reason) => {
                     this.isFetching = false;
-                    reject(I18n.toErrorMessage(reason));
+                    reject(toErrorMessage(reason));
                 });
         });
     }
@@ -315,7 +315,7 @@ export class AuthenticateStore {
                             onFailure: (err: Error) => {
                                 runInAction(() => {
                                     this.isFetching = false;
-                                    reject(I18n.toErrorMessage(err.message));
+                                    reject(toErrorMessage(err.message));
                                 });
                             },
                         },
@@ -339,7 +339,7 @@ export class AuthenticateStore {
                             onFailure: (err) => {
                                 runInAction(() => {
                                     this.isFetching = false;
-                                    reject(I18n.toErrorMessage(err.message));
+                                    reject(toErrorMessage(err.message));
                                 });
                             },
                         }
@@ -359,7 +359,7 @@ export class AuthenticateStore {
                         .catch((reason) => {
                             runInAction(() => {
                                 this.isFetching = false;
-                                reject(I18n.toErrorMessage(reason));
+                                reject(toErrorMessage(reason));
                             });
                         });
                     break;
@@ -382,7 +382,7 @@ export class AuthenticateStore {
                         onFailure: (err: Error) => {
                             runInAction(() => {
                                 this.isFetching = false;
-                                reject(I18n.toErrorMessage(err.message));
+                                reject(toErrorMessage(err.message));
                             });
                         },
                         mfaRequired: () => {
@@ -404,7 +404,7 @@ export class AuthenticateStore {
                             onFailure: (err) => {
                                 runInAction(() => {
                                     this.isFetching = false;
-                                    reject(I18n.toErrorMessage(err.message));
+                                    reject(toErrorMessage(err.message));
                                 });
                             },
                         }
@@ -422,7 +422,7 @@ export class AuthenticateStore {
                         .catch((reason) => {
                             runInAction(() => {
                                 this.isFetching = false;
-                                reject(I18n.toErrorMessage(reason));
+                                reject(toErrorMessage(reason));
                             });
                         });
                     break;
@@ -471,7 +471,7 @@ export class AuthenticateStore {
                 onFailure: (err) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
                 inputVerificationCode: (data: any) => {
@@ -531,7 +531,7 @@ export class AuthenticateStore {
                         .catch((reason) => {
                             runInAction(() => {
                                 this.isFetching = false;
-                                reject(I18n.toErrorMessage(reason));
+                                reject(toErrorMessage(reason));
                             });
                         });
                 }
@@ -539,7 +539,7 @@ export class AuthenticateStore {
             .catch((reason) => {
                 runInAction(() => {
                     this.isFetching = false;
-                    reject(I18n.toErrorMessage(reason));
+                    reject(toErrorMessage(reason));
                 });
             });
     }
@@ -696,7 +696,7 @@ export class AuthenticateStore {
                         onFailure: (err) => {
                             runInAction(() => {
                                 this.isFetching = false;
-                                reject(I18n.toErrorMessage(err.message));
+                                reject(toErrorMessage(err.message));
                             });
                         },
                     }
@@ -766,7 +766,7 @@ export class AuthenticateStore {
                 onFailure: (err) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
                 inputVerificationCode: (data: any) => {
@@ -860,7 +860,7 @@ export class AuthenticateStore {
                 onFailure: (err) => {
                     runInAction(() => {
                         this.isFetching = false;
-                        reject(I18n.toErrorMessage(err.message));
+                        reject(toErrorMessage(err.message));
                     });
                 },
             });

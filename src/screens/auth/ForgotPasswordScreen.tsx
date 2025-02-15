@@ -8,41 +8,34 @@
  * it only in accordance with the terms of the license agreement you
  * entered into with Certis CISCO Security Pte Ltd.
  */
-import React, { Component } from 'react';
+import { HeaderBackButton } from "@react-navigation/elements";
+import { inject, observer } from "mobx-react";
+import React, { FC, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
-    KeyboardAvoidingView,
-    TouchableWithoutFeedback,
-    Image,
-    Keyboard,
     Alert,
     BackHandler,
-    StyleSheet,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
     Platform,
-} from 'react-native';
-import { inject, observer } from 'mobx-react';
-import {
-    NavigationScreenProp,
-    NavigationRoute,
-    NavigationScreenConfig,
-    NavigationEventSubscription,
-    NavigationEventPayload,
-} from 'react-navigation';
-import { HeaderBackButton } from 'react-navigation-stack'
-
-import LinearGradient from 'react-native-linear-gradient';
-import { I18n } from '../../utils/I18n';
-import { Colors } from '../../utils/Colors';
-import { AllStores } from '../../stores/RootStore';
-import { ForgotPasswordStore, Step } from '../../stores/ForgotPasswordStore';
-import { ForgotInitialScreen } from './forgot-password/ForgotInitialScreen';
-import { ForgotVerifyScreen } from './forgot-password/ForgotVerifyScreen';
-import { ForgotSuccessScreen } from './forgot-password/ForgotSuccessScreen';
-import { Spinner } from '../../shared-components/Spinner';
-import { SafeAreaFix } from '../../shared-components/cathy/IOSFix';
-import { cathyViews } from '../../shared-components/cathy/CommonViews';
+    StyleSheet,
+    TouchableWithoutFeedback,
+} from "react-native";
+import LinearGradient from "react-native-linear-gradient";
+import { Spinner } from "../../shared-components/Spinner";
+import { cathyViews } from "../../shared-components/cathy/CommonViews";
+import { SafeAreaFix } from "../../shared-components/cathy/IOSFix";
+import { ForgotPasswordStore, Step } from "../../stores/ForgotPasswordStore";
+import { AllStores } from "../../stores/RootStore";
+import { Colors } from "../../utils/Colors";
+import { ForgotInitialScreen } from "./forgot-password/ForgotInitialScreen";
+import { ForgotSuccessScreen } from "./forgot-password/ForgotSuccessScreen";
+import { ForgotVerifyScreen } from "./forgot-password/ForgotVerifyScreen";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     forgotPasswordStore: ForgotPasswordStore;
 }
 
@@ -51,178 +44,162 @@ interface Props {
  *
  * @author Lingqi
  */
-@inject(({ rootStore }: AllStores) => ({
+const ForgotPasswordScreen: FC<Props> = inject(({ rootStore }: AllStores) => ({
     forgotPasswordStore: rootStore.forgotPasswordStore,
-}))
-@observer
-export class ForgotPasswordScreen extends Component<Props> {
+}))(
+    observer(({ forgotPasswordStore }) => {
+        const previousStepRef = useRef<Step>("Initial");
+        const { t } = useTranslation();
+        const navigation = useNavigation<any>();
+        const route = useRoute<any>();
 
-    private willFocusSubs!: NavigationEventSubscription;
-    private willBlurSubs!: NavigationEventSubscription;
+        const step: Step = route.params?.step;
 
-    private previousStep: Step;
-
-    constructor(props: Props) {
-        super(props);
-        props.forgotPasswordStore.clearStates();
-        this.previousStep = 'Initial';
-        this.onWillFocus = this.onWillFocus.bind(this);
-        this.onWillBlur = this.onWillBlur.bind(this);
-        this.onBackPressed = this.onBackPressed.bind(this);
-        this.onPressBackground = this.onPressBackground.bind(this);
-    }
-
-    static navigationOptions: NavigationScreenConfig<any> = ({ navigation }) => {
-        const step: Step = navigation.getParam('step');
-        return {
-            headerLeft: step === 'Initial' || step === 'Verify' ? (
-                <HeaderBackButton
-                    backTitleVisible={Platform.OS === 'ios'}
-                    tintColor={Platform.OS === 'android' ? Colors.unfocusedIcon : Colors.focusedIcon}
-                    pressColorAndroid={Colors.blackOverlay}
-                    onPress={navigation.getParam('onBackPressed')} />
-            ) : (
-                    undefined
-                ),
-        };
-    }
-
-    //**************************************************************
-    // Component Lifecycle
-    //****************************************************************
-
-    componentDidMount() {
-        const { navigation } = this.props;
-        navigation.setParams({ onBackPressed: this.onBackPressed });
-        this.willFocusSubs = navigation.addListener('willFocus', this.onWillFocus);
-        this.willBlurSubs = navigation.addListener('willBlur', this.onWillBlur);
-    }
-
-    componentWillUnmount() {
-        this.willFocusSubs.remove();
-        this.willBlurSubs.remove();
-        BackHandler.removeEventListener('hardwareBackPress', this.onBackPressed);
-    }
-
-    //**************************************************************
-    // Navigation Lifecycle
-    //****************************************************************
-
-    onWillFocus(payload: NavigationEventPayload) {
-        BackHandler.addEventListener('hardwareBackPress', this.onBackPressed);
-    }
-
-    onWillBlur(payload: NavigationEventPayload) {
-        BackHandler.removeEventListener('hardwareBackPress', this.onBackPressed);
-    }
-
-    //**************************************************************
-    // Button Callbacks
-    //****************************************************************
-
-    private onBackPressed(): boolean {
-        Keyboard.dismiss();
-        const { navigation, forgotPasswordStore } = this.props;
-        switch (forgotPasswordStore.step) {
-            case 'Initial':
-                navigation.navigate('Auth/Login');
-                return true;
-            case 'Verify':
-                if (!forgotPasswordStore.emptyPassword) {
-                    Alert.alert(
-                        I18n.t('alert.title.exit'),
-                        I18n.t('alert.exit_reset'),
-                        [
-                            { text: I18n.t('alert.button.cancel'), style: 'cancel' },
-                            {
-                                text: I18n.t('alert.button.exit'),
-                                onPress: () => {
-                                    navigation.navigate('Auth/Login');
-                                    forgotPasswordStore.clearStates();
+        const onBackPressed = (): boolean => {
+            Keyboard.dismiss();
+            switch (forgotPasswordStore.step) {
+                case "Initial":
+                    navigation.navigate("Auth/Login");
+                    return true;
+                case "Verify":
+                    if (!forgotPasswordStore.emptyPassword) {
+                        Alert.alert(
+                            t("alert.title.exit"),
+                            t("alert.exit_reset"),
+                            [
+                                {
+                                    text: t("alert.button.cancel"),
+                                    style: "cancel",
                                 },
-                                style: 'destructive',
-                            },
-                        ],
-                        { cancelable: false },
-                    );
-                } else {
-                    navigation.navigate('Auth/Login');
-                    forgotPasswordStore.clearStates();
-                }
-                return true;
-            case 'Success':
-                return true;
-        }
-    }
+                                {
+                                    text: t("alert.button.exit"),
+                                    onPress: () => {
+                                        navigation.navigate("Auth/Login");
+                                        forgotPasswordStore.clearStates();
+                                    },
+                                    style: "destructive",
+                                },
+                            ],
+                            { cancelable: false }
+                        );
+                    } else {
+                        navigation.navigate("Auth/Login");
+                        forgotPasswordStore.clearStates();
+                    }
+                    return true;
+                case "Success":
+                    return true;
+            }
+            return false;
+        };
 
-    private onPressBackground(): void {
-        Keyboard.dismiss();
-    }
+        useEffect(() => {
+            navigation.setParams({ onBackPressed });
+            navigation.setOptions({
+                headerLeft:
+                    step === "Initial" || step === "Verify" ? (
+                        <HeaderBackButton
+                            // backTitleVisible={Platform.OS === 'ios'}
+                            tintColor={
+                                Platform.OS === "android"
+                                    ? Colors.unfocusedIcon
+                                    : Colors.focusedIcon
+                            }
+                            // pressColorAndroid={Colors.blackOverlay}
+                            onPress={onBackPressed}
+                        />
+                    ) : undefined,
+            });
+        }, []);
 
-    //**************************************************************
-    // Render
-    //****************************************************************
+        useEffect(() => {
+            forgotPasswordStore.clearStates();
+            navigation.setParams({ onBackPressed });
 
-    render() {
-        const { forgotPasswordStore } = this.props;
-        // prevent infinite re-rendering
-        if (forgotPasswordStore.step !== this.previousStep) {
-            this.previousStep = forgotPasswordStore.step;
+            const willFocusSubs = navigation.addListener("focus", () => {
+                BackHandler.addEventListener(
+                    "hardwareBackPress",
+                    onBackPressed
+                );
+            });
+
+            const willBlurSubs = navigation.addListener("blur", () => {
+                BackHandler.removeEventListener(
+                    "hardwareBackPress",
+                    onBackPressed
+                );
+            });
+
+            return () => {
+                willFocusSubs?.remove?.();
+                willBlurSubs?.remove?.();
+                BackHandler.removeEventListener(
+                    "hardwareBackPress",
+                    onBackPressed
+                );
+            };
+        }, []);
+
+        // Update navigation params when step changes
+        if (forgotPasswordStore.step !== previousStepRef.current) {
+            previousStepRef.current = forgotPasswordStore.step;
             setTimeout(() => {
-                this.props.navigation.setParams({
-                    step: forgotPasswordStore.step
+                navigation.setParams({
+                    step: forgotPasswordStore.step,
                 });
             });
         }
+
         let forgotChildScreen;
         switch (forgotPasswordStore.step) {
-            case 'Initial':
+            case "Initial":
                 forgotChildScreen = (
-                    <ForgotInitialScreen
-                        navigation={this.props.navigation} />
+                    <ForgotInitialScreen navigation={navigation} />
                 );
                 break;
-            case 'Verify':
-                forgotChildScreen = (
-                    <ForgotVerifyScreen />
-                );
+            case "Verify":
+                forgotChildScreen = <ForgotVerifyScreen />;
                 break;
-            case 'Success':
+            case "Success":
                 forgotChildScreen = (
-                    <ForgotSuccessScreen
-                        navigation={this.props.navigation} />
+                    <ForgotSuccessScreen navigation={navigation} />
                 );
                 break;
         }
+
         return (
             <SafeAreaFix
                 statusBarColor={Colors.cathyBlueBg}
-                containerColor={'white'}>
-                <TouchableWithoutFeedback
-                    onPress={this.onPressBackground}>
+                containerColor={"white"}
+            >
+                <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
                     <KeyboardAvoidingView
                         style={styles.keyboardAvoidingContainer}
-                        behavior={'padding'}
-                        keyboardVerticalOffset={20}>
+                        behavior={"padding"}
+                        keyboardVerticalOffset={20}
+                    >
                         <LinearGradient
                             style={StyleSheet.absoluteFill}
-                            colors={[Colors.cathyBlueBg, 'white']} />
-                        <Spinner
-                            isVisible={forgotPasswordStore.isFetching} />
+                            colors={[Colors.cathyBlueBg, "white"]}
+                        />
+                        <Spinner isVisible={forgotPasswordStore.isFetching} />
                         {forgotChildScreen}
                         <Image
                             style={cathyViews.bottomLogo}
-                            source={require('../../assets/image/logo.png')} />
+                            source={require("../../assets/image/logo.png")}
+                        />
                     </KeyboardAvoidingView>
                 </TouchableWithoutFeedback>
             </SafeAreaFix>
         );
-    }
-}
+    })
+);
 
 const styles = StyleSheet.create({
     keyboardAvoidingContainer: {
         flex: 1,
-        justifyContent: 'flex-end',
+        justifyContent: "flex-end",
     },
 });
+
+export { ForgotPasswordScreen };

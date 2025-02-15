@@ -1,174 +1,117 @@
-/*
- * Copyright (c) 2020 Certis CISCO Security Pte Ltd
- * All rights reserved.
- *
- * This software is the confidential and proprietary information of
- * Certis CISCO Security Pte Ltd. ("Confidential Information").
- * You shall not disclose such Confidential Information and shall use
- * it only in accordance with the terms of the license agreement you
- * entered into with Certis CISCO Security Pte Ltd.
- */
-import React, {
-    PureComponent,
-    Fragment
-} from 'react';
-import {
-    StatusBar,
-    StyleSheet,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
-import { inject } from 'mobx-react';
-import {
-    NavigationScreenProp,
-    NavigationRoute,
-    NavigationScreenConfig,
-    NavigationStackScreenOptions,
-} from 'react-navigation';
-import { Colors } from '../../../utils/Colors';
-import { Keys } from '../../../utils/Constants';
-import { AllStores } from '../../../stores/RootStore';
-import { AppListStore } from '../../../stores/AppListStore';
-import { HomeGridScreen } from './HomeGridScreen';
-import { HomeListScreen } from './HomeListScreen';
-import { CathyIconButton } from '../../../shared-components/cathy/CathyButton';
+import React, { Fragment, useEffect, useState } from "react";
+import { StatusBar, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { inject, observer } from "mobx-react";
+import { Colors } from "../../../utils/Colors";
+import { Keys } from "../../../utils/Constants";
+import { AllStores } from "../../../stores/RootStore";
+import { AppListStore } from "../../../stores/AppListStore";
+import { HomeGridScreen } from "./HomeGridScreen";
+import { HomeListScreen } from "./HomeListScreen";
+import { CathyIconButton } from "../../../shared-components/cathy/CathyButton";
+import { useTranslation } from "react-i18next";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 interface Props {
-    navigation: NavigationScreenProp<NavigationRoute>;
+    navigation: any;
     appListStore: AppListStore;
 }
-interface State {
-    appListLayout: AppListLayout;
-}
-type AppListLayout = 'grid' | 'list';
 
-/**
- * Component display mobile app list, contains 2 layouts
- *
- * @author Lingqi
- */
-@inject(({ rootStore }: AllStores) => ({
+type AppListLayout = "grid" | "list";
+
+const HomeScreen: React.FC<Props> = inject(({ rootStore }: AllStores) => ({
     appListStore: rootStore.appListStore,
-}))
-export class HomeScreen extends PureComponent<Props, State> {
+}))(
+    observer(({ appListStore }) => {
+        const [appListLayout, setAppListLayout] =
+            useState<AppListLayout>("grid");
+        const { t } = useTranslation();
+        const navigation = useNavigation();
+        const route = useRoute();
 
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            appListLayout: 'grid'
+        const updateAppListLayout = (layout: AppListLayout) => {
+            setAppListLayout(layout);
+            navigation.setParams({ appListLayout: layout });
         };
-        this.onPressLayout = this.onPressLayout.bind(this);
-        props.navigation.setParams({
-            appListLayout: 'grid',
-            onPressLayout: this.onPressLayout,
-        });
-        AsyncStorage.getItem(Keys.APP_LAYOUT).then((appListLayout) => {
-            if (appListLayout) {
-                this.appListLayout = appListLayout as any;
+
+        const onPressLayout = (): void => {
+            const newLayout = appListLayout === "grid" ? "list" : "grid";
+            updateAppListLayout(newLayout);
+            AsyncStorage.setItem(Keys.APP_LAYOUT, newLayout);
+        };
+
+        useEffect(() => {
+            navigation.setParams({
+                appListLayout: "grid",
+                onPressLayout,
+            });
+
+            AsyncStorage.getItem(Keys.APP_LAYOUT).then((savedLayout) => {
+                if (savedLayout) {
+                    updateAppListLayout(savedLayout as AppListLayout);
+                }
+            });
+
+            if (appListStore.appList.length === 0) {
+                appListStore
+                    .fetchAppList()
+                    .then()
+                    .catch((reason) => {
+                        console.log(reason);
+                    });
             }
-        });
-    }
+        }, []);
 
-    private set appListLayout(layout: AppListLayout) {
-        this.setState({ appListLayout: layout });
-        this.props.navigation.setParams({ appListLayout: layout });
-    }
-    private get appListLayout(): AppListLayout {
-        return this.state.appListLayout;
-    }
+        useEffect(() => {
+            const layout: AppListLayout = route.params?.appListLayout ?? "grid";
+            let layoutIcon;
+            switch (layout) {
+                case "grid":
+                    layoutIcon = require("../../../assets/image/icon/view_module.png");
+                    break;
+                case "list":
+                    layoutIcon = require("../../../assets/image/icon/view_list.png");
+                    break;
+            }
 
-    //**************************************************************
-    // Screen Header
-    //****************************************************************
+            navigation.setOptions({
+                title: "Certify",
+                headerTitleAllowFontScaling: false,
+                headerTintColor: "white",
+                headerStyle: {
+                    backgroundColor: Colors.cathyBlue,
+                },
+                headerRight: () => (
+                    <CathyIconButton
+                        style={styles.layoutButton}
+                        iconSource={layoutIcon}
+                        tintColor={"white"}
+                        onPress={route.params?.onPressLayout}
+                    />
+                ),
+            });
+        }, [navigation, route.params]);
 
-    static navigationOptions: NavigationScreenConfig<NavigationStackScreenOptions> = ({ navigation }) => {
-        const layout: AppListLayout = navigation.getParam('appListLayout', 'grid');
-        let layoutIcon;
-        switch (layout) {
-            case 'grid':
-                layoutIcon = require('../../../assets/image/icon/view_module.png');
-                break;
-            case 'list':
-                layoutIcon = require('../../../assets/image/icon/view_list.png');
-                break;
-        }
-        return {
-            title: 'Certify',
-            headerTitleAllowFontScaling: false,
-            headerTintColor: 'white',
-            headerStyle: {
-                backgroundColor: Colors.cathyBlue
-            },
-            headerRight: (
-                <CathyIconButton
-                    style={styles.layoutButton}
-                    iconSource={layoutIcon}
-                    tintColor={'white'}
-                    onPress={navigation.getParam('onPressLayout')} />
-            )
-        };
-    }
-
-    //**************************************************************
-    // Component Lifecycle
-    //****************************************************************
-
-    componentDidMount() {
-        const { appListStore } = this.props;
-        if (appListStore.appList.length === 0) {
-            appListStore.fetchAppList()
-                .then()
-                .catch((reason) => {
-                    console.log(reason);
-                });
-        }
-    }
-
-    //**************************************************************
-    // Button Callbacks
-    //****************************************************************
-
-    private onPressLayout(): void {
-        switch (this.appListLayout) {
-            case 'grid':
-                this.appListLayout = 'list';
-                AsyncStorage.setItem(Keys.APP_LAYOUT, 'list');
-                break;
-            case 'list':
-                this.appListLayout = 'grid';
-                AsyncStorage.setItem(Keys.APP_LAYOUT, 'grid');
-                break;
-        }
-    }
-
-    //**************************************************************
-    // Render
-    //****************************************************************
-
-    render() {
-        let homeChildScreen;
-        switch (this.appListLayout) {
-            case 'grid':
-                homeChildScreen = <HomeGridScreen />;
-                break;
-            case 'list':
-                homeChildScreen = <HomeListScreen />;
-                break;
-        }
         return (
             <Fragment>
                 <StatusBar
-                    barStyle={'light-content'}
-                    backgroundColor={Colors.cathyBlueDark} />
-                {homeChildScreen}
+                    barStyle={"light-content"}
+                    backgroundColor={Colors.cathyBlueDark}
+                />
+                {appListLayout === "grid" ? (
+                    <HomeGridScreen />
+                ) : (
+                    <HomeListScreen />
+                )}
             </Fragment>
         );
-    }
-}
+    })
+);
 
 const styles = StyleSheet.create({
     layoutButton: {
         marginRight: 8,
     },
 });
+
+export { HomeScreen };
